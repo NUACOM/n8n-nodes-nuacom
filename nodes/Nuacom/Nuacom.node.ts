@@ -145,6 +145,16 @@ export class Nuacom implements INodeType {
 				],
 			},
 			{
+				displayName: 'From',
+				name: 'smsFrom',
+				type: 'string',
+				default: '',
+				required: true,
+				placeholder: 'NUACOM',
+				description: 'Sender name or number (must be registered on your account)',
+				displayOptions: { show: { resource: ['sms'], operation: ['send'] } },
+			},
+			{
 				displayName: 'To',
 				name: 'smsTo',
 				type: 'string',
@@ -197,7 +207,7 @@ export class Nuacom implements INodeType {
 					if (operation === 'getAll') {
 						responseData = await this.helpers.request({
 							method: 'GET',
-							url: `${BASE_URL}/v2/contacts`,
+							url: `${BASE_URL}/v3/contacts`,
 							headers,
 							json: true,
 						});
@@ -205,7 +215,7 @@ export class Nuacom implements INodeType {
 						const contactId = this.getNodeParameter('contactId', i) as string;
 						responseData = await this.helpers.request({
 							method: 'GET',
-							url: `${BASE_URL}/v2/contacts/${contactId}`,
+							url: `${BASE_URL}/v3/contacts/${contactId}`,
 							headers,
 							json: true,
 						});
@@ -217,7 +227,7 @@ export class Nuacom implements INodeType {
 						};
 						responseData = await this.helpers.request({
 							method: 'POST',
-							url: `${BASE_URL}/v2/contacts`,
+							url: `${BASE_URL}/v3/contacts`,
 							headers,
 							body,
 							json: true,
@@ -231,7 +241,7 @@ export class Nuacom implements INodeType {
 						};
 						responseData = await this.helpers.request({
 							method: 'PUT',
-							url: `${BASE_URL}/v2/contacts/${contactId}`,
+							url: `${BASE_URL}/v3/contacts/${contactId}`,
 							headers,
 							body,
 							json: true,
@@ -240,7 +250,7 @@ export class Nuacom implements INodeType {
 						const contactId = this.getNodeParameter('contactId', i) as string;
 						responseData = await this.helpers.request({
 							method: 'DELETE',
-							url: `${BASE_URL}/v2/contacts/${contactId}`,
+							url: `${BASE_URL}/v3/contacts/${contactId}`,
 							headers,
 							json: true,
 						});
@@ -249,7 +259,7 @@ export class Nuacom implements INodeType {
 					if (operation === 'getAll') {
 						responseData = await this.helpers.request({
 							method: 'GET',
-							url: `${BASE_URL}/v2/call-logs`,
+							url: `${BASE_URL}/v2/call-log`,
 							headers,
 							json: true,
 						});
@@ -271,12 +281,13 @@ export class Nuacom implements INodeType {
 					});
 				} else if (resource === 'sms') {
 					const body = {
-						to: this.getNodeParameter('smsTo', i) as string,
+						from: this.getNodeParameter('smsFrom', i) as string,
+						to: [{ number: this.getNodeParameter('smsTo', i) as string }],
 						message: this.getNodeParameter('smsMessage', i) as string,
 					};
 					responseData = await this.helpers.request({
 						method: 'POST',
-						url: `${BASE_URL}/v2/sms`,
+						url: `${BASE_URL}/v2/sms/send`,
 						headers,
 						body,
 						json: true,
