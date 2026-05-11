@@ -194,7 +194,7 @@ export class Nuacom implements INodeType {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
 		const credentials = await this.getCredentials('nuacomApi');
-		const headers = { 'X-Auth-Token': credentials.apiKey as string };
+		const headers = { 'X-Nuacom-Token': credentials.apiKey as string };
 
 		for (let i = 0; i < items.length; i++) {
 			const resource = this.getNodeParameter('resource', i) as string;

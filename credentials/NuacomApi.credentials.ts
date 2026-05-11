@@ -25,7 +25,7 @@ export class NuacomApi implements ICredentialType {
 		type: 'generic',
 		properties: {
 			headers: {
-				'X-Auth-Token': '={{$credentials.apiKey}}',
+				'X-Nuacom-Token': '={{$credentials.apiKey}}',
 			},
 		},
 	};
