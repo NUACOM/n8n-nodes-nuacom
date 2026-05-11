@@ -8,7 +8,7 @@ import {
 export class NuacomApi implements ICredentialType {
 	name = 'nuacomApi';
 	displayName = 'NUACOM API';
-	documentationUrl = 'https://api.nuacom.ie';
+	documentationUrl = 'https://api.api-nuacom.com';
 	properties: INodeProperties[] = [
 		{
 			displayName: 'API Key',
@@ -31,7 +31,7 @@ export class NuacomApi implements ICredentialType {
 
 	test: ICredentialTestRequest = {
 		request: {
-			baseURL: 'https://api.nuacom.ie',
+			baseURL: 'https://api.api-nuacom.com',
 			url: '/v3/webhook-subscriptions',
 		},
 	};

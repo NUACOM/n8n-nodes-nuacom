@@ -7,7 +7,7 @@ import {
 	NodeOperationError,
 } from 'n8n-workflow';
 
-const BASE_URL = 'https://api.nuacom.ie';
+const BASE_URL = 'https://api.api-nuacom.com';
 
 export class Nuacom implements INodeType {
 	description: INodeTypeDescription = {

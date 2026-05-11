@@ -24,7 +24,7 @@ const EVENT_TYPES = [
 	{ name: 'Contact Deleted', value: 'contact_deleted' },
 ];
 
-const BASE_URL = 'https://api.nuacom.ie';
+const BASE_URL = 'https://api.api-nuacom.com';
 
 export class NuacomTrigger implements INodeType {
 	description: INodeTypeDescription = {
