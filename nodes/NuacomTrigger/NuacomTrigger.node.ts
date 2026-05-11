@@ -1,11 +1,13 @@
 import {
 	IHookFunctions,
+	IHttpRequestOptions,
 	INodeType,
 	INodeTypeDescription,
 	IWebhookFunctions,
 	IWebhookResponseData,
 	NodeOperationError,
 } from 'n8n-workflow';
+import { NUACOM_BASE_URL } from '../../constants';
 
 const EVENT_TYPES = [
 	{ name: 'Call Event', value: 'call_event' },
@@ -23,8 +25,6 @@ const EVENT_TYPES = [
 	{ name: 'Contact Updated', value: 'contact_updated' },
 	{ name: 'Contact Deleted', value: 'contact_deleted' },
 ];
-
-const BASE_URL = 'https://api.api-nuacom.com';
 
 export class NuacomTrigger implements INodeType {
 	description: INodeTypeDescription = {
@@ -72,12 +72,12 @@ export class NuacomTrigger implements INodeType {
 				}
 
 				const credentials = await this.getCredentials('nuacomApi');
-				const response = await this.helpers.request({
+				const response = await this.helpers.httpRequest({
 					method: 'GET',
-					url: `${BASE_URL}/v3/webhook-subscriptions`,
+					url: `${NUACOM_BASE_URL}/v3/webhook-subscriptions`,
 					headers: { 'X-Auth-Token': credentials.apiKey as string },
 					json: true,
-				});
+				} as IHttpRequestOptions);
 
 				const subscriptions: Array<{ id: number; type: string }> =
 					(response as { data: Array<{ id: number; type: string }> }).data ?? [];
@@ -92,16 +92,16 @@ export class NuacomTrigger implements INodeType {
 
 				const body = { type: event, url: webhookUrl };
 
-				const response = await this.helpers.request({
+				const response = await this.helpers.httpRequest({
 					method: 'POST',
-					url: `${BASE_URL}/v3/webhook-subscriptions`,
+					url: `${NUACOM_BASE_URL}/v3/webhook-subscriptions`,
 					headers: {
 						'X-Auth-Token': credentials.apiKey as string,
 						'Content-Type': 'application/json',
 					},
 					body,
 					json: true,
-				});
+				} as IHttpRequestOptions);
 
 				const id = (response as { id: number }).id;
 				if (!id) {
@@ -126,12 +126,12 @@ export class NuacomTrigger implements INodeType {
 				const credentials = await this.getCredentials('nuacomApi');
 
 				try {
-					await this.helpers.request({
+					await this.helpers.httpRequest({
 						method: 'DELETE',
-						url: `${BASE_URL}/v3/webhook-subscriptions/${webhookData.webhookId}`,
+						url: `${NUACOM_BASE_URL}/v3/webhook-subscriptions/${webhookData.webhookId}`,
 						headers: { 'X-Auth-Token': credentials.apiKey as string },
 						json: true,
-					});
+					} as IHttpRequestOptions);
 				} catch {
 					return false;
 				}

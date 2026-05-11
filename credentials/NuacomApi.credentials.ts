@@ -4,11 +4,12 @@ import {
 	ICredentialType,
 	INodeProperties,
 } from 'n8n-workflow';
+import { NUACOM_BASE_URL } from '../constants';
 
 export class NuacomApi implements ICredentialType {
 	name = 'nuacomApi';
 	displayName = 'NUACOM API';
-	documentationUrl = 'https://api.api-nuacom.com';
+	documentationUrl = NUACOM_BASE_URL;
 	properties: INodeProperties[] = [
 		{
 			displayName: 'API Key',
@@ -31,7 +32,7 @@ export class NuacomApi implements ICredentialType {
 
 	test: ICredentialTestRequest = {
 		request: {
-			baseURL: 'https://api.api-nuacom.com',
+			baseURL: NUACOM_BASE_URL,
 			url: '/v3/webhook-subscriptions',
 		},
 	};

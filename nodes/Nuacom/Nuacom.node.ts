@@ -1,13 +1,13 @@
 import {
 	IDataObject,
 	IExecuteFunctions,
+	IHttpRequestOptions,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
 	NodeOperationError,
 } from 'n8n-workflow';
-
-const BASE_URL = 'https://api.api-nuacom.com';
+import { NUACOM_BASE_URL } from '../../constants';
 
 export class Nuacom implements INodeType {
 	description: INodeTypeDescription = {
@@ -205,17 +205,17 @@ export class Nuacom implements INodeType {
 			try {
 				if (resource === 'contact') {
 					if (operation === 'getAll') {
-						responseData = await this.helpers.request({
+						responseData = await this.helpers.httpRequest({
 							method: 'GET',
-							url: `${BASE_URL}/v3/contacts`,
+							url: `${NUACOM_BASE_URL}/v3/contacts`,
 							headers,
 							json: true,
 						});
 					} else if (operation === 'get') {
 						const contactId = this.getNodeParameter('contactId', i) as string;
-						responseData = await this.helpers.request({
+						responseData = await this.helpers.httpRequest({
 							method: 'GET',
-							url: `${BASE_URL}/v3/contacts/${contactId}`,
+							url: `${NUACOM_BASE_URL}/v3/contacts/${contactId}`,
 							headers,
 							json: true,
 						});
@@ -225,9 +225,9 @@ export class Nuacom implements INodeType {
 							phone: this.getNodeParameter('phone', i) as string,
 							email: this.getNodeParameter('email', i) as string,
 						};
-						responseData = await this.helpers.request({
+						responseData = await this.helpers.httpRequest({
 							method: 'POST',
-							url: `${BASE_URL}/v3/contacts`,
+							url: `${NUACOM_BASE_URL}/v3/contacts`,
 							headers,
 							body,
 							json: true,
@@ -239,43 +239,43 @@ export class Nuacom implements INodeType {
 							phone: this.getNodeParameter('phone', i) as string,
 							email: this.getNodeParameter('email', i) as string,
 						};
-						responseData = await this.helpers.request({
+						responseData = await this.helpers.httpRequest({
 							method: 'PUT',
-							url: `${BASE_URL}/v3/contacts/${contactId}`,
+							url: `${NUACOM_BASE_URL}/v3/contacts/${contactId}`,
 							headers,
 							body,
 							json: true,
 						});
 					} else if (operation === 'delete') {
 						const contactId = this.getNodeParameter('contactId', i) as string;
-						responseData = await this.helpers.request({
+						responseData = await this.helpers.httpRequest({
 							method: 'DELETE',
-							url: `${BASE_URL}/v3/contacts/${contactId}`,
+							url: `${NUACOM_BASE_URL}/v3/contacts/${contactId}`,
 							headers,
 							json: true,
 						});
 					}
 				} else if (resource === 'callLog') {
 					if (operation === 'getAll') {
-						responseData = await this.helpers.request({
+						responseData = await this.helpers.httpRequest({
 							method: 'GET',
-							url: `${BASE_URL}/v2/call-log`,
+							url: `${NUACOM_BASE_URL}/v2/call-log`,
 							headers,
 							json: true,
 						});
 					} else if (operation === 'get') {
 						const callId = this.getNodeParameter('callId', i) as string;
-						responseData = await this.helpers.request({
+						responseData = await this.helpers.httpRequest({
 							method: 'GET',
-							url: `${BASE_URL}/v2/call-logs/${callId}`,
+							url: `${NUACOM_BASE_URL}/v2/call-logs/${callId}`,
 							headers,
 							json: true,
 						});
 					}
 				} else if (resource === 'extension') {
-					responseData = await this.helpers.request({
+					responseData = await this.helpers.httpRequest({
 						method: 'GET',
-						url: `${BASE_URL}/v2/extensions`,
+						url: `${NUACOM_BASE_URL}/v2/extensions`,
 						headers,
 						json: true,
 					});
@@ -285,18 +285,18 @@ export class Nuacom implements INodeType {
 						to: [{ number: this.getNodeParameter('smsTo', i) as string }],
 						message: this.getNodeParameter('smsMessage', i) as string,
 					};
-					responseData = await this.helpers.request({
+					responseData = await this.helpers.httpRequest({
 						method: 'POST',
-						url: `${BASE_URL}/v2/sms/send`,
+						url: `${NUACOM_BASE_URL}/v2/sms/send`,
 						headers,
 						body,
 						json: true,
 					});
 				} else if (resource === 'webhookSubscription') {
 					if (operation === 'getAll') {
-						responseData = await this.helpers.request({
+						responseData = await this.helpers.httpRequest({
 							method: 'GET',
-							url: `${BASE_URL}/v3/webhook-subscriptions`,
+							url: `${NUACOM_BASE_URL}/v3/webhook-subscriptions`,
 							headers,
 							json: true,
 						});
