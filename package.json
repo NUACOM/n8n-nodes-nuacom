@@ -1,0 +1,49 @@
+{
+  "name": "n8n-nodes-nuacom",
+  "version": "0.1.0",
+  "description": "NUACOM community nodes for n8n — webhook triggers and REST API actions",
+  "keywords": [
+    "n8n-community-node-package"
+  ],
+  "license": "MIT",
+  "homepage": "https://nuacom.ie",
+  "author": {
+    "name": "NUACOM",
+    "email": "support@nuacom.ie"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nuacom/n8n-nodes-nuacom"
+  },
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc && npm run copy:icons",
+    "copy:icons": "copyfiles -u 1 \"nodes/**/*.svg\" dist/",
+    "dev": "tsc --watch",
+    "lint": "eslint nodes credentials --ext .ts",
+    "prepublishOnly": "npm run build"
+  },
+  "files": [
+    "dist"
+  ],
+  "n8n": {
+    "n8nNodesApiVersion": 1,
+    "credentials": [
+      "dist/credentials/NuacomApi.credentials.js"
+    ],
+    "nodes": [
+      "dist/nodes/NuacomTrigger/NuacomTrigger.node.js",
+      "dist/nodes/Nuacom/Nuacom.node.js"
+    ]
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "copyfiles": "^2.4.1",
+    "eslint": "^8.56.0",
+    "n8n-workflow": "*",
+    "typescript": "^5.3.0"
+  },
+  "peerDependencies": {
+    "n8n-workflow": "*"
+  }
+}
