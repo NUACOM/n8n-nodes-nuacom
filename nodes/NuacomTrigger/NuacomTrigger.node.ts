@@ -74,7 +74,7 @@ export class NuacomTrigger implements INodeType {
 				const credentials = await this.getCredentials('nuacomApi');
 				const response = await this.helpers.httpRequest({
 					method: 'GET',
-					url: `${NUACOM_BASE_URL}/v3/webhook-subscriptions`,
+					url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions`,
 					headers: { 'X-Nuacom-Token': credentials.apiKey as string },
 					json: true,
 				} as IHttpRequestOptions);
@@ -94,7 +94,7 @@ export class NuacomTrigger implements INodeType {
 
 				const response = await this.helpers.httpRequest({
 					method: 'POST',
-					url: `${NUACOM_BASE_URL}/v3/webhook-subscriptions`,
+					url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions`,
 					headers: {
 						'X-Nuacom-Token': credentials.apiKey as string,
 						'Content-Type': 'application/json',
@@ -128,7 +128,7 @@ export class NuacomTrigger implements INodeType {
 				try {
 					await this.helpers.httpRequest({
 						method: 'DELETE',
-						url: `${NUACOM_BASE_URL}/v3/webhook-subscriptions/${webhookData.webhookId}`,
+						url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions/${webhookData.webhookId}`,
 						headers: { 'X-Nuacom-Token': credentials.apiKey as string },
 						json: true,
 					} as IHttpRequestOptions);

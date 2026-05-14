@@ -33,7 +33,7 @@ export class NuacomApi implements ICredentialType {
 	test: ICredentialTestRequest = {
 		request: {
 			baseURL: NUACOM_BASE_URL,
-			url: '/v3/webhook-subscriptions',
+			url: '/v2/webhook-subscriptions',
 		},
 	};
 }

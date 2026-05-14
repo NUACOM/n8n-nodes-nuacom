@@ -337,14 +337,14 @@ export class Nuacom implements INodeType {
 					if (operation === 'getAll') {
 						responseData = await this.helpers.httpRequest({
 							method: 'GET',
-							url: `${NUACOM_BASE_URL}/v3/webhook-subscriptions`,
+							url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions`,
 							headers,
 							json: true,
 						});
 					} else if (operation === 'create') {
 						responseData = await this.helpers.httpRequest({
 							method: 'POST',
-							url: `${NUACOM_BASE_URL}/v3/webhook-subscriptions`,
+							url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions`,
 							headers,
 							body: {
 								type: this.getNodeParameter('webhookType', i) as string,
@@ -356,7 +356,7 @@ export class Nuacom implements INodeType {
 						const subscriptionId = this.getNodeParameter('subscriptionId', i) as string;
 						responseData = await this.helpers.httpRequest({
 							method: 'DELETE',
-							url: `${NUACOM_BASE_URL}/v3/webhook-subscriptions/${subscriptionId}`,
+							url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions/${subscriptionId}`,
 							headers,
 							json: true,
 						});
