@@ -187,6 +187,47 @@ export class Nuacom implements INodeType {
 					{ name: 'Get Many', value: 'getAll', action: 'List subscriptions' },
 				],
 			},
+			{
+				displayName: 'Event Type',
+				name: 'webhookType',
+				type: 'options',
+				required: true,
+				default: 'call_event',
+				displayOptions: { show: { resource: ['webhookSubscription'], operation: ['create'] } },
+				options: [
+					{ name: 'Call Event', value: 'call_event' },
+					{ name: 'Contact Created', value: 'contact_created' },
+					{ name: 'Contact Deleted', value: 'contact_deleted' },
+					{ name: 'Contact Updated', value: 'contact_updated' },
+					{ name: 'IVR Option Selected', value: 'ivr_option_selected' },
+					{ name: 'Message Received', value: 'message_received' },
+					{ name: 'Message Sent', value: 'message_sent' },
+					{ name: 'Note Added', value: 'note_added' },
+					{ name: 'Note Removed', value: 'note_removed' },
+					{ name: 'Note Updated', value: 'note_updated' },
+					{ name: 'SMS Delivery Status', value: 'sms_delivery_status' },
+					{ name: 'Tag Added', value: 'tag_added' },
+					{ name: 'Tag Removed', value: 'tag_removed' },
+					{ name: 'Voicemail Received', value: 'voicemail_received' },
+				],
+			},
+			{
+				displayName: 'Webhook URL',
+				name: 'webhookUrl',
+				type: 'string',
+				required: true,
+				default: '',
+				placeholder: 'https://example.com/webhook',
+				displayOptions: { show: { resource: ['webhookSubscription'], operation: ['create'] } },
+			},
+			{
+				displayName: 'Subscription ID',
+				name: 'subscriptionId',
+				type: 'string',
+				required: true,
+				default: '',
+				displayOptions: { show: { resource: ['webhookSubscription'], operation: ['delete'] } },
+			},
 		],
 	};
 
@@ -297,6 +338,25 @@ export class Nuacom implements INodeType {
 						responseData = await this.helpers.httpRequest({
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v3/webhook-subscriptions`,
+							headers,
+							json: true,
+						});
+					} else if (operation === 'create') {
+						responseData = await this.helpers.httpRequest({
+							method: 'POST',
+							url: `${NUACOM_BASE_URL}/v3/webhook-subscriptions`,
+							headers,
+							body: {
+								type: this.getNodeParameter('webhookType', i) as string,
+								url: this.getNodeParameter('webhookUrl', i) as string,
+							},
+							json: true,
+						});
+					} else if (operation === 'delete') {
+						const subscriptionId = this.getNodeParameter('subscriptionId', i) as string;
+						responseData = await this.helpers.httpRequest({
+							method: 'DELETE',
+							url: `${NUACOM_BASE_URL}/v3/webhook-subscriptions/${subscriptionId}`,
 							headers,
 							json: true,
 						});
