@@ -92,14 +92,47 @@ export class NuacomTrigger implements INodeType {
 				description: 'Only trigger for calls involving this extension number. Leave empty for all extensions.',
 				displayOptions: { show: { event: CALL_EVENTS } },
 			},
+			// IVR filter
+			{
+				displayName: 'IVR',
+				name: 'ivr',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. Main Menu',
+				description: 'Only trigger for a specific IVR. Leave empty for all IVRs.',
+				displayOptions: { show: { event: ['ivr_option_selected'] } },
+			},
+			// Voicemail filter
+			{
+				displayName: 'Voicemail Box',
+				name: 'voicemailBox',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. Sales',
+				description: 'Only trigger for a specific voicemail box. Leave empty for all boxes.',
+				displayOptions: { show: { event: ['voicemail_received'] } },
+			},
 			// Message filters
 			{
 				displayName: 'Channel',
 				name: 'channel',
+				type: 'options',
+				default: '',
+				description: 'Only trigger for messages on this channel.',
+				displayOptions: { show: { event: MESSAGE_EVENTS } },
+				options: [
+					{ name: 'Any', value: '' },
+					{ name: 'SMS', value: 'sms' },
+					{ name: 'WhatsApp', value: 'whatsapp' },
+				],
+			},
+			{
+				displayName: 'Message Contains',
+				name: 'messageContains',
 				type: 'string',
 				default: '',
-				placeholder: 'e.g. sms, whatsapp',
-				description: 'Only trigger for messages on this channel. Leave empty for all channels.',
+				placeholder: 'e.g. hello',
+				description: 'Only trigger if the message content contains this text (case-insensitive). Leave empty for all messages.',
 				displayOptions: { show: { event: MESSAGE_EVENTS } },
 			},
 		],
@@ -218,8 +251,12 @@ export class NuacomTrigger implements INodeType {
 		}
 
 		if (MESSAGE_EVENTS.includes(event)) {
-			const channel = (this.getNodeParameter('channel', '') as string).trim();
+			const channel = this.getNodeParameter('channel', '') as string;
+			const messageContains = (this.getNodeParameter('messageContains', '') as string).trim().toLowerCase();
 			if (channel && bodyData.channel !== channel) {
+				return {};
+			}
+			if (messageContains && !String(bodyData.content ?? '').toLowerCase().includes(messageContains)) {
 				return {};
 			}
 		}
