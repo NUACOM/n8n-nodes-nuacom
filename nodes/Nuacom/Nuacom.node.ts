@@ -72,11 +72,21 @@ export class Nuacom implements INodeType {
 				},
 			},
 			{
-				displayName: 'Name',
-				name: 'name',
+				displayName: 'First Name',
+				name: 'firstName',
 				type: 'string',
 				default: '',
-				required: true,
+				description: 'At least one of First Name or Last Name is required',
+				displayOptions: {
+					show: { resource: ['contact'], operation: ['create', 'update'] },
+				},
+			},
+			{
+				displayName: 'Last Name',
+				name: 'lastName',
+				type: 'string',
+				default: '',
+				description: 'At least one of First Name or Last Name is required',
 				displayOptions: {
 					show: { resource: ['contact'], operation: ['create', 'update'] },
 				},
@@ -447,11 +457,15 @@ export class Nuacom implements INodeType {
 							json: true,
 						});
 					} else if (operation === 'create') {
-						const body = {
-							name: this.getNodeParameter('name', i) as string,
-							phone: this.getNodeParameter('phone', i) as string,
-							email: this.getNodeParameter('email', i) as string,
-						};
+						const firstName = (this.getNodeParameter('firstName', i) as string).trim();
+						const lastName = (this.getNodeParameter('lastName', i) as string).trim();
+						const phone = (this.getNodeParameter('phone', i) as string).trim();
+						const email = (this.getNodeParameter('email', i) as string).trim();
+						const body: Record<string, unknown> = {};
+						if (firstName) body.first_name = firstName;
+						if (lastName) body.last_name = lastName;
+						if (phone) body.phones = [phone];
+						if (email) body.email = email;
 						responseData = await this.helpers.httpRequest({
 							method: 'POST',
 							url: `${NUACOM_BASE_URL}/v2/contacts`,
@@ -461,11 +475,15 @@ export class Nuacom implements INodeType {
 						});
 					} else if (operation === 'update') {
 						const contactId = this.getNodeParameter('contactId', i) as string;
-						const body = {
-							name: this.getNodeParameter('name', i) as string,
-							phone: this.getNodeParameter('phone', i) as string,
-							email: this.getNodeParameter('email', i) as string,
-						};
+						const firstName = (this.getNodeParameter('firstName', i) as string).trim();
+						const lastName = (this.getNodeParameter('lastName', i) as string).trim();
+						const phone = (this.getNodeParameter('phone', i) as string).trim();
+						const email = (this.getNodeParameter('email', i) as string).trim();
+						const body: Record<string, unknown> = {};
+						if (firstName) body.first_name = firstName;
+						if (lastName) body.last_name = lastName;
+						if (phone) body.phones = [phone];
+						if (email) body.email = email;
 						responseData = await this.helpers.httpRequest({
 							method: 'PUT',
 							url: `${NUACOM_BASE_URL}/v2/contacts/${contactId}`,
