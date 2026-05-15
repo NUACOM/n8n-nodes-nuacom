@@ -34,9 +34,12 @@ export class Nuacom implements INodeType {
 				noDataExpression: true,
 				default: 'contact',
 				options: [
+					{ name: 'Auto Dialer', value: 'autoDialer' },
 					{ name: 'Call Log', value: 'callLog' },
 					{ name: 'Contact', value: 'contact' },
 					{ name: 'Extension', value: 'extension' },
+					{ name: 'Message', value: 'message' },
+					{ name: 'NUACOM AI', value: 'nuacomAi' },
 					{ name: 'SMS', value: 'sms' },
 					{ name: 'Webhook Subscription', value: 'webhookSubscription' },
 				],
@@ -106,6 +109,7 @@ export class Nuacom implements INodeType {
 				displayOptions: { show: { resource: ['callLog'] } },
 				default: 'getAll',
 				options: [
+					{ name: 'Download Recording', value: 'downloadRecording', action: 'Download a call recording' },
 					{ name: 'Get Many', value: 'getAll', action: 'Get call logs' },
 					{ name: 'Get', value: 'get', action: 'Get a call log by ID' },
 				],
@@ -116,7 +120,12 @@ export class Nuacom implements INodeType {
 				type: 'string',
 				default: '',
 				required: true,
-				displayOptions: { show: { resource: ['callLog'], operation: ['get'] } },
+				displayOptions: {
+					show: {
+						resource: ['callLog', 'nuacomAi'],
+						operation: ['get', 'downloadRecording', 'getCallAiData'],
+					},
+				},
 			},
 
 			// ── Extension ──────────────────────────────────────────────────────────
@@ -224,6 +233,109 @@ export class Nuacom implements INodeType {
 				default: '',
 				displayOptions: { show: { resource: ['webhookSubscription'], operation: ['delete'] } },
 			},
+
+			// ── Message ──────────────────────────────────────────────────────────
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: { show: { resource: ['message'] } },
+				default: 'sendWhatsapp',
+				options: [
+					{ name: 'Get', value: 'get', action: 'Get a message by ID' },
+					{ name: 'Get Conversation', value: 'getConversation', action: 'Get a conversation by ID' },
+					{ name: 'Send WhatsApp', value: 'sendWhatsapp', action: 'Send a WhatsApp message' },
+				],
+			},
+			{
+				displayName: 'To',
+				name: 'messageTo',
+				type: 'string',
+				default: '',
+				required: true,
+				placeholder: '+353871234567',
+				description: 'Recipient phone number',
+				displayOptions: { show: { resource: ['message'], operation: ['sendWhatsapp'] } },
+			},
+			{
+				displayName: 'Content',
+				name: 'messageContent',
+				type: 'string',
+				typeOptions: { rows: 4 },
+				default: '',
+				required: true,
+				description: 'Message text to send',
+				displayOptions: { show: { resource: ['message'], operation: ['sendWhatsapp'] } },
+			},
+			{
+				displayName: 'Message ID',
+				name: 'messageId',
+				type: 'string',
+				default: '',
+				required: true,
+				displayOptions: { show: { resource: ['message'], operation: ['get'] } },
+			},
+			{
+				displayName: 'Conversation ID',
+				name: 'conversationId',
+				type: 'string',
+				default: '',
+				required: true,
+				displayOptions: { show: { resource: ['message'], operation: ['getConversation'] } },
+			},
+
+			// ── Auto Dialer ───────────────────────────────────────────────────────
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: { show: { resource: ['autoDialer'] } },
+				default: 'getCampaigns',
+				options: [
+					{ name: 'Add Contact to Campaign', value: 'addCampaignContact', action: 'Add a contact to a campaign' },
+					{ name: 'Get Campaign', value: 'getCampaign', action: 'Get a campaign by ID' },
+					{ name: 'Get Campaign Contacts', value: 'getCampaignContacts', action: 'Get contacts in a campaign' },
+					{ name: 'Get Many Campaigns', value: 'getCampaigns', action: 'Get all campaigns' },
+				],
+			},
+			{
+				displayName: 'Campaign ID',
+				name: 'campaignId',
+				type: 'string',
+				default: '',
+				required: true,
+				displayOptions: {
+					show: {
+						resource: ['autoDialer'],
+						operation: ['getCampaign', 'getCampaignContacts', 'addCampaignContact'],
+					},
+				},
+			},
+			{
+				displayName: 'Contact Number',
+				name: 'contactNumber',
+				type: 'string',
+				default: '',
+				required: true,
+				placeholder: '+353871234567',
+				description: 'Phone number in E.164 format',
+				displayOptions: { show: { resource: ['autoDialer'], operation: ['addCampaignContact'] } },
+			},
+
+			// ── NUACOM AI ─────────────────────────────────────────────────────────
+			{
+				displayName: 'Operation',
+				name: 'operation',
+				type: 'options',
+				noDataExpression: true,
+				displayOptions: { show: { resource: ['nuacomAi'] } },
+				default: 'getCallAiData',
+				options: [
+					{ name: 'Get Call AI Data', value: 'getCallAiData', action: 'Get AI data for a call' },
+				],
+			},
 		],
 	};
 
@@ -308,6 +420,13 @@ export class Nuacom implements INodeType {
 							headers,
 							json: true,
 						});
+					} else if (operation === 'downloadRecording') {
+						const callId = this.getNodeParameter('callId', i) as string;
+						responseData = await this.helpers.httpRequest({
+							method: 'GET',
+							url: `${NUACOM_BASE_URL}/v2/call-recording/${callId}`,
+							headers,
+						});
 					}
 				} else if (resource === 'extension') {
 					responseData = await this.helpers.httpRequest({
@@ -362,6 +481,82 @@ export class Nuacom implements INodeType {
 						responseData = await this.helpers.httpRequest({
 							method: 'DELETE',
 							url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions/${subscriptionId}`,
+							headers,
+							json: true,
+						});
+					}
+				} else if (resource === 'message') {
+					if (operation === 'sendWhatsapp') {
+						const body = {
+							channel_type: 'whatsapp',
+							to: this.getNodeParameter('messageTo', i) as string,
+							content: this.getNodeParameter('messageContent', i) as string,
+						};
+						responseData = await this.helpers.httpRequest({
+							method: 'POST',
+							url: `${NUACOM_BASE_URL}/v2/conversations`,
+							headers,
+							body,
+							json: true,
+						});
+					} else if (operation === 'get') {
+						const messageId = this.getNodeParameter('messageId', i) as string;
+						responseData = await this.helpers.httpRequest({
+							method: 'GET',
+							url: `${NUACOM_BASE_URL}/v2/conversations/messages/${messageId}`,
+							headers,
+							json: true,
+						});
+					} else if (operation === 'getConversation') {
+						const conversationId = this.getNodeParameter('conversationId', i) as string;
+						responseData = await this.helpers.httpRequest({
+							method: 'GET',
+							url: `${NUACOM_BASE_URL}/v2/conversations/${conversationId}`,
+							headers,
+							json: true,
+						});
+					}
+				} else if (resource === 'autoDialer') {
+					if (operation === 'getCampaigns') {
+						responseData = await this.helpers.httpRequest({
+							method: 'GET',
+							url: `${NUACOM_BASE_URL}/v2/auto-dialer/campaigns`,
+							headers,
+							json: true,
+						});
+					} else if (operation === 'getCampaign') {
+						const campaignId = this.getNodeParameter('campaignId', i) as string;
+						responseData = await this.helpers.httpRequest({
+							method: 'GET',
+							url: `${NUACOM_BASE_URL}/v2/auto-dialer/campaigns/${campaignId}`,
+							headers,
+							json: true,
+						});
+					} else if (operation === 'getCampaignContacts') {
+						const campaignId = this.getNodeParameter('campaignId', i) as string;
+						responseData = await this.helpers.httpRequest({
+							method: 'GET',
+							url: `${NUACOM_BASE_URL}/v2/auto-dialer/campaign/${campaignId}/numbers`,
+							headers,
+							json: true,
+						});
+					} else if (operation === 'addCampaignContact') {
+						const campaignId = this.getNodeParameter('campaignId', i) as string;
+						const contactNumber = this.getNodeParameter('contactNumber', i) as string;
+						responseData = await this.helpers.httpRequest({
+							method: 'POST',
+							url: `${NUACOM_BASE_URL}/v2/auto-dialer/campaign/${campaignId}/numbers`,
+							headers,
+							body: { number: contactNumber },
+							json: true,
+						});
+					}
+				} else if (resource === 'nuacomAi') {
+					if (operation === 'getCallAiData') {
+						const callId = this.getNodeParameter('callId', i) as string;
+						responseData = await this.helpers.httpRequest({
+							method: 'GET',
+							url: `${NUACOM_BASE_URL}/v2/calls/${callId}/ai-data`,
 							headers,
 							json: true,
 						});
