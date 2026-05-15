@@ -99,6 +99,28 @@ export class Nuacom implements INodeType {
 					show: { resource: ['contact'], operation: ['create', 'update'] },
 				},
 			},
+			{
+				displayName: 'Per Page',
+				name: 'perPage',
+				type: 'options',
+				default: 50,
+				description: 'Number of results per page',
+				displayOptions: { show: { resource: ['contact'], operation: ['getAll'] } },
+				options: [
+					{ name: '15', value: 15 },
+					{ name: '50', value: 50 },
+					{ name: '100', value: 100 },
+					{ name: 'All', value: -1 },
+				],
+			},
+			{
+				displayName: 'Page',
+				name: 'page',
+				type: 'number',
+				default: 1,
+				description: 'Page number to retrieve',
+				displayOptions: { show: { resource: ['contact'], operation: ['getAll'] } },
+			},
 
 			// ── Call Log ──────────────────────────────────────────────────────────
 			{
@@ -407,12 +429,15 @@ export class Nuacom implements INodeType {
 			try {
 				if (resource === 'contact') {
 					if (operation === 'getAll') {
+						const perPage = this.getNodeParameter('perPage', i) as number;
+						const page = this.getNodeParameter('page', i) as number;
 						responseData = await this.helpers.httpRequest({
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/contacts`,
 							headers,
+							qs: { page, perPage },
 							json: true,
-						});
+						} as IHttpRequestOptions);
 					} else if (operation === 'get') {
 						const contactId = this.getNodeParameter('contactId', i) as string;
 						responseData = await this.helpers.httpRequest({
