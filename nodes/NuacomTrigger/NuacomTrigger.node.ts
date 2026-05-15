@@ -10,16 +10,16 @@ import {
 import { NUACOM_BASE_URL } from '../../constants';
 
 const EVENT_TYPES = [
-	{ name: 'Call Answered (Outbound)', value: 'outbound_answered_call_event' },
-	{ name: 'Call Completed (Any)', value: 'call_event' },
+	{ name: 'Call Answered', value: 'call_answered' },
+	{ name: 'Call Completed', value: 'call_event' },
 	{ name: 'Call IVR Option Selected (Coming Soon)', value: 'ivr_option_selected' },
 	{ name: 'Call Initiated (Coming Soon)', value: 'call_initiated' },
-	{ name: 'Call Missed (Inbound)', value: 'inbound_missed_call_event' },
+	{ name: 'Call Missed', value: 'call_missed' },
 	{ name: 'Call Updated (Coming Soon)', value: 'call_updated' },
 	{ name: 'Contact Created (Coming Soon)', value: 'contact_created' },
 	{ name: 'Contact Deleted (Coming Soon)', value: 'contact_deleted' },
 	{ name: 'Contact Updated (Coming Soon)', value: 'contact_updated' },
-	{ name: 'Incoming Call (Inbound)', value: 'inbound_call_event' },
+	{ name: 'Incoming Call', value: 'inbound_call_event' },
 	{ name: 'Message Received', value: 'message_received' },
 	{ name: 'Message Sent', value: 'message_sent' },
 	{ name: 'Note Added', value: 'note_added' },
@@ -31,13 +31,9 @@ const EVENT_TYPES = [
 	{ name: 'Voicemail Received (Coming Soon)', value: 'voicemail_received' },
 ];
 
-const CALL_EVENTS = [
-	'call_event',
-	'outbound_answered_call_event',
-	'inbound_call_event',
-	'inbound_missed_call_event',
-	'outbound_call_event',
-];
+const CALL_EVENTS_WITH_DIRECTION_FILTER = ['call_answered', 'call_event', 'call_missed'];
+
+const CALL_EVENTS = [...CALL_EVENTS_WITH_DIRECTION_FILTER, 'inbound_call_event'];
 
 const MESSAGE_EVENTS = ['message_received', 'message_sent'];
 
@@ -82,7 +78,7 @@ export class NuacomTrigger implements INodeType {
 				type: 'options',
 				default: '',
 				description: 'Only trigger for calls in this direction. Leave as "Any" to receive all.',
-				displayOptions: { show: { event: ['call_event'] } },
+				displayOptions: { show: { event: CALL_EVENTS_WITH_DIRECTION_FILTER } },
 				options: [
 					{ name: 'Any', value: '' },
 					{ name: 'Inbound', value: 'inbound' },
