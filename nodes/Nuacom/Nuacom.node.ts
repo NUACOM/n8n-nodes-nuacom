@@ -109,6 +109,11 @@ export class Nuacom implements INodeType {
 				displayOptions: { show: { resource: ['callLog'] } },
 				default: 'getAll',
 				options: [
+					{ name: 'Add Note', value: 'addNote', action: 'Add a note to a call' },
+					{ name: 'Add Tag by ID', value: 'addTag', action: 'Add a tag to a call by tag info ID' },
+					{ name: 'Add Tag by Name', value: 'addTagByName', action: 'Add a tag to a call by name' },
+					{ name: 'Dial Agent', value: 'dialAgent', action: 'Dial an agent extension' },
+					{ name: 'Dial Team', value: 'dialTeam', action: 'Dial a team queue' },
 					{ name: 'Download Recording', value: 'downloadRecording', action: 'Download a call recording' },
 					{ name: 'Get Many', value: 'getAll', action: 'Get call logs' },
 					{ name: 'Get', value: 'get', action: 'Get a call log by ID' },
@@ -123,9 +128,57 @@ export class Nuacom implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['callLog', 'nuacomAi'],
-						operation: ['get', 'downloadRecording', 'getCallAiData'],
+						operation: ['get', 'downloadRecording', 'getCallAiData', 'addNote', 'addTag', 'addTagByName'],
 					},
 				},
+			},
+			{
+				displayName: 'From Number',
+				name: 'fromNumber',
+				type: 'string',
+				default: '',
+				required: true,
+				placeholder: '+353871234567',
+				description: 'Number to call from (E.164 format)',
+				displayOptions: { show: { resource: ['callLog'], operation: ['dialAgent', 'dialTeam'] } },
+			},
+			{
+				displayName: 'Destination Number',
+				name: 'dstNumber',
+				type: 'string',
+				default: '',
+				required: true,
+				placeholder: '+353871234567',
+				description: 'Extension or queue number to dial (E.164 format)',
+				displayOptions: { show: { resource: ['callLog'], operation: ['dialAgent', 'dialTeam'] } },
+			},
+			{
+				displayName: 'Note',
+				name: 'noteText',
+				type: 'string',
+				typeOptions: { rows: 3 },
+				default: '',
+				required: true,
+				description: 'Note text to add to the call',
+				displayOptions: { show: { resource: ['callLog'], operation: ['addNote'] } },
+			},
+			{
+				displayName: 'Tag Info ID',
+				name: 'tagInfoId',
+				type: 'number',
+				default: 0,
+				required: true,
+				description: 'ID of the tag definition to apply',
+				displayOptions: { show: { resource: ['callLog'], operation: ['addTag'] } },
+			},
+			{
+				displayName: 'Tag Name',
+				name: 'tagName',
+				type: 'string',
+				default: '',
+				required: true,
+				description: 'Name of the tag to apply (created automatically if it does not exist)',
+				displayOptions: { show: { resource: ['callLog'], operation: ['addTagByName'] } },
 			},
 
 			// ── Extension ──────────────────────────────────────────────────────────
@@ -426,6 +479,66 @@ export class Nuacom implements INodeType {
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/call-recording/${callId}`,
 							headers,
+						});
+					} else if (operation === 'dialAgent') {
+						responseData = await this.helpers.httpRequest({
+							method: 'POST',
+							url: `${NUACOM_BASE_URL}/v2/request-callback`,
+							headers,
+							body: {
+								method: 'extension',
+								from_number: this.getNodeParameter('fromNumber', i) as string,
+								dst_number: this.getNodeParameter('dstNumber', i) as string,
+							},
+							json: true,
+						});
+					} else if (operation === 'dialTeam') {
+						responseData = await this.helpers.httpRequest({
+							method: 'POST',
+							url: `${NUACOM_BASE_URL}/v2/request-callback`,
+							headers,
+							body: {
+								method: 'queue',
+								from_number: this.getNodeParameter('fromNumber', i) as string,
+								dst_number: this.getNodeParameter('dstNumber', i) as string,
+							},
+							json: true,
+						});
+					} else if (operation === 'addNote') {
+						const callId = this.getNodeParameter('callId', i) as string;
+						responseData = await this.helpers.httpRequest({
+							method: 'POST',
+							url: `${NUACOM_BASE_URL}/v2/call-notes`,
+							headers,
+							body: {
+								callId,
+								note: this.getNodeParameter('noteText', i) as string,
+							},
+							json: true,
+						});
+					} else if (operation === 'addTag') {
+						const callId = this.getNodeParameter('callId', i) as string;
+						responseData = await this.helpers.httpRequest({
+							method: 'POST',
+							url: `${NUACOM_BASE_URL}/v2/call-tags`,
+							headers,
+							body: {
+								callId,
+								tag_info_id: this.getNodeParameter('tagInfoId', i) as number,
+							},
+							json: true,
+						});
+					} else if (operation === 'addTagByName') {
+						const callId = this.getNodeParameter('callId', i) as string;
+						responseData = await this.helpers.httpRequest({
+							method: 'POST',
+							url: `${NUACOM_BASE_URL}/v2/call-tags/by-name`,
+							headers,
+							body: {
+								callId,
+								tag_name: this.getNodeParameter('tagName', i) as string,
+							},
+							json: true,
 						});
 					}
 				} else if (resource === 'extension') {
