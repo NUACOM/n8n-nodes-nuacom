@@ -195,21 +195,23 @@ export class Nuacom implements INodeType {
 				default: 'call_event',
 				displayOptions: { show: { resource: ['webhookSubscription'], operation: ['create'] } },
 				options: [
-					{ name: 'Call Answered', value: 'outbound_answered_call_event' },
-					{ name: 'Call Completed', value: 'call_event' },
+					{ name: 'All Call Events (Ringing, Answered & Ended)', value: 'call_event_listeners' },
+					{ name: 'Call Ended (Any)', value: 'call_event' },
+					{ name: 'Call Ended (Inbound)', value: 'inbound_call_event' },
+					{ name: 'Call Ended (Inbound Missed)', value: 'inbound_missed_call_event' },
+					{ name: 'Call Ended (Outbound)', value: 'outbound_call_event' },
+					{ name: 'Call Ended (Outbound Answered)', value: 'outbound_answered_call_event' },
 					{ name: 'Call Initiated (Coming Soon)', value: 'call_initiated' },
-					{ name: 'Call Missed', value: 'inbound_missed_call_event' },
 					{ name: 'Call Updated (Coming Soon)', value: 'call_updated' },
 					{ name: 'Contact Created (Coming Soon)', value: 'contact_created' },
 					{ name: 'Contact Deleted (Coming Soon)', value: 'contact_deleted' },
 					{ name: 'Contact Updated (Coming Soon)', value: 'contact_updated' },
-					{ name: 'Incoming Call', value: 'inbound_call_event' },
 					{ name: 'IVR Option Selected (Coming Soon)', value: 'ivr_option_selected' },
 					{ name: 'Message Received', value: 'message_received' },
 					{ name: 'Message Sent', value: 'message_sent' },
 					{ name: 'Note Added', value: 'note_added' },
-					{ name: 'Note Removed', value: 'note_removed' },
-					{ name: 'Note Updated', value: 'note_updated' },
+					{ name: 'Note Removed (Coming Soon)', value: 'note_removed' },
+					{ name: 'Note Updated (Coming Soon)', value: 'note_updated' },
 					{ name: 'SMS Delivery Status', value: 'sms_delivery_status' },
 					{ name: 'Tag Added', value: 'tag_added' },
 					{ name: 'Tag Removed', value: 'tag_removed' },
@@ -348,7 +350,7 @@ export class Nuacom implements INodeType {
 						});
 					} else if (operation === 'create') {
 						const webhookType = this.getNodeParameter('webhookType', i) as string;
-						const comingSoon = ['voicemail_received', 'ivr_option_selected', 'contact_created', 'contact_updated', 'contact_deleted', 'call_initiated', 'call_updated'];
+						const comingSoon = ['voicemail_received', 'ivr_option_selected', 'contact_created', 'contact_updated', 'contact_deleted', 'call_initiated', 'call_updated', 'note_removed', 'note_updated'];
 						if (comingSoon.includes(webhookType)) {
 							throw new NodeOperationError(
 								this.getNode(),
