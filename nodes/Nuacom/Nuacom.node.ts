@@ -248,7 +248,7 @@ export class Nuacom implements INodeType {
 					if (operation === 'getAll') {
 						responseData = await this.helpers.httpRequest({
 							method: 'GET',
-							url: `${NUACOM_BASE_URL}/v3/contacts`,
+							url: `${NUACOM_BASE_URL}/v2/contacts`,
 							headers,
 							json: true,
 						});
@@ -256,7 +256,7 @@ export class Nuacom implements INodeType {
 						const contactId = this.getNodeParameter('contactId', i) as string;
 						responseData = await this.helpers.httpRequest({
 							method: 'GET',
-							url: `${NUACOM_BASE_URL}/v3/contacts/${contactId}`,
+							url: `${NUACOM_BASE_URL}/v2/contacts/${contactId}`,
 							headers,
 							json: true,
 						});
@@ -268,7 +268,7 @@ export class Nuacom implements INodeType {
 						};
 						responseData = await this.helpers.httpRequest({
 							method: 'POST',
-							url: `${NUACOM_BASE_URL}/v3/contacts`,
+							url: `${NUACOM_BASE_URL}/v2/contacts`,
 							headers,
 							body,
 							json: true,
@@ -282,7 +282,7 @@ export class Nuacom implements INodeType {
 						};
 						responseData = await this.helpers.httpRequest({
 							method: 'PUT',
-							url: `${NUACOM_BASE_URL}/v3/contacts/${contactId}`,
+							url: `${NUACOM_BASE_URL}/v2/contacts/${contactId}`,
 							headers,
 							body,
 							json: true,
@@ -291,7 +291,7 @@ export class Nuacom implements INodeType {
 						const contactId = this.getNodeParameter('contactId', i) as string;
 						responseData = await this.helpers.httpRequest({
 							method: 'DELETE',
-							url: `${NUACOM_BASE_URL}/v3/contacts/${contactId}`,
+							url: `${NUACOM_BASE_URL}/v2/contacts/${contactId}`,
 							headers,
 							json: true,
 						});
