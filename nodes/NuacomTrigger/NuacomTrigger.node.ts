@@ -31,6 +31,16 @@ const EVENT_TYPES = [
 	{ name: 'Voicemail Received (Coming Soon)', value: 'voicemail_received' },
 ];
 
+const CALL_EVENTS = [
+	'call_event',
+	'outbound_answered_call_event',
+	'inbound_call_event',
+	'inbound_missed_call_event',
+	'outbound_call_event',
+];
+
+const MESSAGE_EVENTS = ['message_received', 'message_sent'];
+
 export class NuacomTrigger implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'NUACOM Trigger',
@@ -64,6 +74,46 @@ export class NuacomTrigger implements INodeType {
 				required: true,
 				default: 'call_event',
 				options: EVENT_TYPES,
+			},
+			// Call filters
+			{
+				displayName: 'Direction',
+				name: 'direction',
+				type: 'options',
+				default: '',
+				description: 'Only trigger for calls in this direction. Leave as "Any" to receive all.',
+				displayOptions: { show: { event: CALL_EVENTS } },
+				options: [
+					{ name: 'Any', value: '' },
+					{ name: 'Inbound', value: 'inbound' },
+					{ name: 'Outbound', value: 'outbound' },
+				],
+			},
+			{
+				displayName: 'Queue',
+				name: 'queue',
+				type: 'string',
+				default: '',
+				description: 'Only trigger for calls in this queue. Leave empty for all queues.',
+				displayOptions: { show: { event: CALL_EVENTS } },
+			},
+			{
+				displayName: 'Extension',
+				name: 'extension',
+				type: 'string',
+				default: '',
+				description: 'Only trigger for calls involving this extension number. Leave empty for all extensions.',
+				displayOptions: { show: { event: CALL_EVENTS } },
+			},
+			// Message filters
+			{
+				displayName: 'Channel',
+				name: 'channel',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. sms, whatsapp',
+				description: 'Only trigger for messages on this channel. Leave empty for all channels.',
+				displayOptions: { show: { event: MESSAGE_EVENTS } },
 			},
 		],
 	};
@@ -157,7 +207,35 @@ export class NuacomTrigger implements INodeType {
 	};
 
 	async webhook(this: IWebhookFunctions): Promise<IWebhookResponseData> {
-		const bodyData = this.getBodyData();
+		const bodyData = this.getBodyData() as Record<string, unknown> & import('n8n-workflow').IDataObject;
+		const event = this.getNodeParameter('event') as string;
+
+		if (CALL_EVENTS.includes(event)) {
+			const direction = this.getNodeParameter('direction', '') as string;
+			const queue = (this.getNodeParameter('queue', '') as string).trim();
+			const extension = (this.getNodeParameter('extension', '') as string).trim();
+
+			if (direction && bodyData.call_direction !== direction) {
+				return {};
+			}
+			if (queue && bodyData.call_in_queue !== queue) {
+				return {};
+			}
+			if (extension) {
+				const localCaller = String(bodyData.call_caller_number_local ?? '');
+				const localCallee = String(bodyData.call_callee_number_local ?? '');
+				if (localCaller !== extension && localCallee !== extension) {
+					return {};
+				}
+			}
+		}
+
+		if (MESSAGE_EVENTS.includes(event)) {
+			const channel = (this.getNodeParameter('channel', '') as string).trim();
+			if (channel && bodyData.channel !== channel) {
+				return {};
+			}
+		}
 
 		return {
 			workflowData: [this.helpers.returnJsonArray(bodyData)],
