@@ -196,9 +196,9 @@ export class Nuacom implements INodeType {
 				displayOptions: { show: { resource: ['webhookSubscription'], operation: ['create'] } },
 				options: [
 					{ name: 'Call Event', value: 'call_event' },
-					{ name: 'Contact Created', value: 'contact_created' },
-					{ name: 'Contact Deleted', value: 'contact_deleted' },
-					{ name: 'Contact Updated', value: 'contact_updated' },
+					{ name: 'Contact Created (Coming Soon)', value: 'contact_created' },
+					{ name: 'Contact Deleted (Coming Soon)', value: 'contact_deleted' },
+					{ name: 'Contact Updated (Coming Soon)', value: 'contact_updated' },
 					{ name: 'IVR Option Selected (Coming Soon)', value: 'ivr_option_selected' },
 					{ name: 'Message Received', value: 'message_received' },
 					{ name: 'Message Sent', value: 'message_sent' },
@@ -343,7 +343,7 @@ export class Nuacom implements INodeType {
 						});
 					} else if (operation === 'create') {
 						const webhookType = this.getNodeParameter('webhookType', i) as string;
-						const comingSoon = ['voicemail_received', 'ivr_option_selected'];
+						const comingSoon = ['voicemail_received', 'ivr_option_selected', 'contact_created', 'contact_updated', 'contact_deleted'];
 						if (comingSoon.includes(webhookType)) {
 							throw new NodeOperationError(
 								this.getNode(),
