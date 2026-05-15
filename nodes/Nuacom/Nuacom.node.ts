@@ -199,7 +199,7 @@ export class Nuacom implements INodeType {
 					{ name: 'Contact Created', value: 'contact_created' },
 					{ name: 'Contact Deleted', value: 'contact_deleted' },
 					{ name: 'Contact Updated', value: 'contact_updated' },
-					{ name: 'IVR Option Selected', value: 'ivr_option_selected' },
+					{ name: 'IVR Option Selected (Coming Soon)', value: 'ivr_option_selected' },
 					{ name: 'Message Received', value: 'message_received' },
 					{ name: 'Message Sent', value: 'message_sent' },
 					{ name: 'Note Added', value: 'note_added' },
@@ -208,7 +208,7 @@ export class Nuacom implements INodeType {
 					{ name: 'SMS Delivery Status', value: 'sms_delivery_status' },
 					{ name: 'Tag Added', value: 'tag_added' },
 					{ name: 'Tag Removed', value: 'tag_removed' },
-					{ name: 'Voicemail Received', value: 'voicemail_received' },
+					{ name: 'Voicemail Received (Coming Soon)', value: 'voicemail_received' },
 				],
 			},
 			{
@@ -342,12 +342,21 @@ export class Nuacom implements INodeType {
 							json: true,
 						});
 					} else if (operation === 'create') {
+						const webhookType = this.getNodeParameter('webhookType', i) as string;
+						const comingSoon = ['voicemail_received', 'ivr_option_selected'];
+						if (comingSoon.includes(webhookType)) {
+							throw new NodeOperationError(
+								this.getNode(),
+								`The "${webhookType}" event is not yet available. Coming soon.`,
+								{ itemIndex: i },
+							);
+						}
 						responseData = await this.helpers.httpRequest({
 							method: 'POST',
 							url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions`,
 							headers,
 							body: {
-								type: this.getNodeParameter('webhookType', i) as string,
+								type: webhookType,
 								url: this.getNodeParameter('webhookUrl', i) as string,
 							},
 							json: true,

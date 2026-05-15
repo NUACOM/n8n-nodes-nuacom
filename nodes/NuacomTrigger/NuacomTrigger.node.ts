@@ -11,7 +11,7 @@ import { NUACOM_BASE_URL } from '../../constants';
 
 const EVENT_TYPES = [
 	{ name: 'Call Event', value: 'call_event' },
-	{ name: 'IVR Option Selected', value: 'ivr_option_selected' },
+	{ name: 'IVR Option Selected (Coming Soon)', value: 'ivr_option_selected' },
 	{ name: 'Message Received', value: 'message_received' },
 	{ name: 'Message Sent', value: 'message_sent' },
 	{ name: 'Note Added', value: 'note_added' },
@@ -20,7 +20,7 @@ const EVENT_TYPES = [
 	{ name: 'Tag Added', value: 'tag_added' },
 	{ name: 'Tag Removed', value: 'tag_removed' },
 	{ name: 'SMS Delivery Status', value: 'sms_delivery_status' },
-	{ name: 'Voicemail Received', value: 'voicemail_received' },
+	{ name: 'Voicemail Received (Coming Soon)', value: 'voicemail_received' },
 	{ name: 'Contact Created', value: 'contact_created' },
 	{ name: 'Contact Updated', value: 'contact_updated' },
 	{ name: 'Contact Deleted', value: 'contact_deleted' },
@@ -88,6 +88,15 @@ export class NuacomTrigger implements INodeType {
 			async create(this: IHookFunctions): Promise<boolean> {
 				const webhookUrl = this.getNodeWebhookUrl('default');
 				const event = this.getNodeParameter('event') as string;
+
+				const comingSoon = ['voicemail_received', 'ivr_option_selected'];
+				if (comingSoon.includes(event)) {
+					throw new NodeOperationError(
+						this.getNode(),
+						`The "${event}" event is not yet available. Coming soon.`,
+					);
+				}
+
 				const credentials = await this.getCredentials('nuacomApi');
 
 				const body = { type: event, url: webhookUrl };
