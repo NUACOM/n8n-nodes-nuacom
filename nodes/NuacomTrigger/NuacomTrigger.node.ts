@@ -16,9 +16,6 @@ const EVENT_TYPES = [
 	{ name: 'Call Initiated', value: 'call_initiated' },
 	{ name: 'Call Missed', value: 'call_missed' },
 	{ name: 'Call Updated', value: 'call_updated' },
-	{ name: 'Contact Created (Coming Soon)', value: 'contact_created' },
-	{ name: 'Contact Deleted (Coming Soon)', value: 'contact_deleted' },
-	{ name: 'Contact Updated (Coming Soon)', value: 'contact_updated' },
 	{ name: 'Incoming Call', value: 'inbound_call_event' },
 	{ name: 'Message Received', value: 'message_received' },
 	{ name: 'Message Sent', value: 'message_sent' },
@@ -140,7 +137,7 @@ export class NuacomTrigger implements INodeType {
 				const webhookUrl = this.getNodeWebhookUrl('default');
 				const event = this.getNodeParameter('event') as string;
 
-				const comingSoon = ['voicemail_received', 'ivr_option_selected', 'contact_created', 'contact_updated', 'contact_deleted', 'note_removed', 'note_updated'];
+				const comingSoon = ['voicemail_received', 'ivr_option_selected', 'note_removed', 'note_updated'];
 				if (comingSoon.includes(event)) {
 					throw new NodeOperationError(
 						this.getNode(),
