@@ -82,7 +82,7 @@ export class NuacomTrigger implements INodeType {
 				type: 'options',
 				default: '',
 				description: 'Only trigger for calls in this direction. Leave as "Any" to receive all.',
-				displayOptions: { show: { event: CALL_EVENTS } },
+				displayOptions: { show: { event: ['call_event'] } },
 				options: [
 					{ name: 'Any', value: '' },
 					{ name: 'Inbound', value: 'inbound' },
