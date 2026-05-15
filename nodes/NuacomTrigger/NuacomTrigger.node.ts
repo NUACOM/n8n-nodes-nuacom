@@ -92,6 +92,34 @@ export class NuacomTrigger implements INodeType {
 				description: 'Only trigger for calls involving this extension number. Leave empty for all extensions.',
 				displayOptions: { show: { event: CALL_EVENTS } },
 			},
+			// Call Updated filters
+			{
+				displayName: 'Direction',
+				name: 'callUpdatedDirection',
+				type: 'options',
+				default: '',
+				description: 'Only trigger for calls in this direction. Leave as "Any" to receive all.',
+				displayOptions: { show: { event: ['call_updated'] } },
+				options: [
+					{ name: 'Any', value: '' },
+					{ name: 'Inbound', value: 'inbound' },
+					{ name: 'Outbound', value: 'outbound' },
+				],
+			},
+			{
+				displayName: 'Event Type',
+				name: 'callUpdatedType',
+				type: 'options',
+				default: '',
+				description: 'Only trigger for a specific update type. Leave as "Any" to receive all.',
+				displayOptions: { show: { event: ['call_updated'] } },
+				options: [
+					{ name: 'Any', value: '' },
+					{ name: 'AI Analysis', value: 'ai_analysis' },
+					{ name: 'Notes', value: 'notes' },
+					{ name: 'Tags', value: 'tags' },
+				],
+			},
 			// IVR filter
 			{
 				displayName: 'IVR',
@@ -247,6 +275,18 @@ export class NuacomTrigger implements INodeType {
 				if (localCaller !== extension && localCallee !== extension) {
 					return {};
 				}
+			}
+		}
+
+		if (event === 'call_updated') {
+			const direction = this.getNodeParameter('callUpdatedDirection', '') as string;
+			const updateType = this.getNodeParameter('callUpdatedType', '') as string;
+
+			if (direction && bodyData.call_direction !== direction) {
+				return {};
+			}
+			if (updateType && bodyData.update_type !== updateType) {
+				return {};
 			}
 		}
 
