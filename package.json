@@ -18,7 +18,7 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc && npm run copy:icons",
-    "copy:icons": "copyfiles -u 1 \"nodes/**/*.svg\" dist/",
+    "copy:icons": "copyfiles -u 0 \"nodes/**/*.svg\" dist/",
     "dev": "tsc --watch",
     "lint": "eslint nodes credentials --ext .ts",
     "prepublishOnly": "npm run build"
