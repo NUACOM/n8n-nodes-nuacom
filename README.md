@@ -13,46 +13,68 @@ This package includes two main nodes:
 
 A comprehensive node for interacting with the NUACOM API, supporting the following resources:
 
+#### 📞 **Call Log**
+- **Get Many** — Retrieve call logs with optional filters: date range, call type (incoming/outgoing/missed/unanswered), extension, queue, phone number, and pagination
+- **Get** — Retrieve a specific call log by ID
+- **Get AI Data** — Retrieve AI analysis data for a call
+- **Download Recording** — Download the recording file for a call
+- **Add Note** — Add a text note to a call
+- **Add Tag by ID** — Tag a call using a tag definition ID
+- **Add Tag by Name** — Tag a call by name (creates the tag automatically if it does not exist)
+
+#### 📲 **Callback**
+- **Dial Agent** — Request a callback to a customer via an agent extension
+- **Dial Team** — Request a callback to a customer via a team queue
+
 #### 👤 **Contact**
-- **Get Many** — List and filter contacts with pagination support
+- **Get Many** — List contacts with pagination (15 / 50 / 100 / All per page)
 - **Get** — Retrieve a specific contact by ID
-- **Create** — Create a new contact
+- **Create** — Create a new contact with name, phone, and email
 - **Update** — Update an existing contact
 - **Delete** — Delete a contact
 
-#### 📞 **Call Log**
-- **Get Many** — Retrieve call logs
-- **Get** — Retrieve a specific call log by ID
+#### 🤖 **Auto Dialer**
+- **Get Many Campaigns** — List all auto dialer campaigns
+- **Get Campaign Stats** — Retrieve statistics for a specific campaign
+- **Get Campaign Contacts** — List contacts (numbers) in a campaign
+- **Add Contact to Campaign** — Add a phone number to an existing campaign
 
 #### 🔌 **Extension**
 - **Get Many** — List all extensions on the account
 
-#### 💬 **SMS**
+#### 💬 **Message**
+- **Send WhatsApp** — Send a WhatsApp message to a phone number
+- **Get** — Retrieve a message by ID
+- **Get Conversation** — Retrieve a conversation by ID
+
+#### 📱 **SMS**
 - **Send** — Send an SMS message from a registered sender
 
 #### 🔔 **Webhook Subscription**
-- **Get Many** — List all webhook subscriptions
+- **Get Many** — List all active webhook subscriptions
 - **Create** — Register a new webhook subscription for an event type
 - **Delete** — Remove an existing webhook subscription
 
+---
+
 ### 2. NUACOM Trigger Node
 
-A webhook trigger node that automatically starts workflows when NUACOM events occur:
+A webhook trigger node that automatically starts workflows when NUACOM events occur. Each event type exposes relevant filters so workflows only fire for the calls or messages you care about.
 
-- **Call Event** — Triggered on inbound/outbound call activity
-- **Contact Created** — Triggered when a new contact is created
-- **Contact Updated** — Triggered when a contact is updated
-- **Contact Deleted** — Triggered when a contact is deleted
-- **IVR Option Selected** — Triggered when a caller selects an IVR menu option
-- **Message Received** — Triggered when an inbound message is received
-- **Message Sent** — Triggered when an outbound message is sent
-- **Note Added** — Triggered when a call note is added
-- **Note Updated** — Triggered when a call note is updated
-- **Note Removed** — Triggered when a call note is removed
-- **SMS Delivery Status** — Triggered on SMS delivery status updates
-- **Tag Added** — Triggered when a tag is added to a call
-- **Tag Removed** — Triggered when a tag is removed from a call
-- **Voicemail Received** — Triggered when a voicemail is received
+| Event | Available Filters |
+|-------|-------------------|
+| **Call Answered** | Direction, Queue, Extension |
+| **Call Completed** | Direction, Queue, Extension |
+| **Call Initiated** | Direction, Queue, Extension |
+| **Call Missed** | Direction, Queue, Extension |
+| **Call Updated** | Direction, Event Type (AI Analysis / Notes / Tags) |
+| **Incoming Call** | Queue, Extension |
+| **Message Received** | Channel (SMS / WhatsApp), Message Contains |
+| **Message Sent** | Channel (SMS / WhatsApp), Message Contains |
+| **Call IVR Option Selected** | *(coming soon)* |
+| **Voicemail Received** | *(coming soon)* |
+
+---
 
 ## Installation
 
@@ -98,15 +120,16 @@ Automatically create a NUACOM contact when a form is filled in:
 1. Add a trigger node (e.g. Webhook or Typeform)
 2. Add a **NUACOM** node
 3. Select **Contact** → **Create**
-4. Map the form fields to `first_name`, `last_name`, `email`, and `phones`
+4. Map the form fields to **First Name**, **Last Name**, **Phone**, and **Email**
 
 ### Example 2: Trigger a Workflow on Incoming Call
 
-Run a workflow whenever a call event occurs on your account:
+Run a workflow whenever a missed call occurs on a specific extension:
 
 1. Add a **NUACOM Trigger** node
-2. Select **Call Event**
-3. Add subsequent nodes to log the call, notify a Slack channel, or update a CRM record
+2. Select **Call Missed**
+3. Set **Extension** to the extension number you want to monitor
+4. Add subsequent nodes to send a Slack notification or create a follow-up task
 
 ### Example 3: Send an SMS Notification
 
@@ -118,14 +141,21 @@ Send an SMS when a specific event happens in another system:
 4. Set the **From** field to your registered sender name or number
 5. Set **To** and **Message** using expressions from the trigger data
 
-### Example 4: Subscribe to Voicemail Events
+### Example 4: Tag a Call After AI Analysis
 
-Register a webhook to receive voicemail notifications:
+Automatically tag a call once its AI analysis is ready:
 
-1. Add a **NUACOM** node
-2. Select **Webhook Subscription** → **Create**
-3. Select **Voicemail Received** as the event type
-4. Enter your webhook URL
+1. Add a **NUACOM Trigger** node, select **Call Updated**, set **Event Type** to **AI Analysis**
+2. Add a **NUACOM** node, select **Call Log** → **Add Tag by Name**
+3. Map **Call ID** from the trigger and set your tag name
+
+### Example 5: Request a Callback When a Lead Submits a Form
+
+Trigger an outbound callback to a customer the moment they fill in a contact form:
+
+1. Add a Webhook trigger node
+2. Add a **NUACOM** node, select **Callback** → **Dial Agent**
+3. Set **Extension** to the agent's extension and **Destination Number** to the customer's phone number from the form
 
 ## Development
 
