@@ -473,8 +473,8 @@ export class Nuacom implements INodeType {
 				default: 'getCampaigns',
 				options: [
 					{ name: 'Add Contact to Campaign', value: 'addCampaignContact', action: 'Add a contact to a campaign' },
-					{ name: 'Get Campaign', value: 'getCampaign', action: 'Get a campaign by ID' },
 					{ name: 'Get Campaign Contacts', value: 'getCampaignContacts', action: 'Get contacts in a campaign' },
+					{ name: 'Get Campaign Stats', value: 'getCampaignStats', action: 'Get stats for a campaign' },
 					{ name: 'Get Many Campaigns', value: 'getCampaigns', action: 'Get all campaigns' },
 				],
 			},
@@ -487,7 +487,7 @@ export class Nuacom implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['autoDialer'],
-						operation: ['getCampaign', 'getCampaignContacts', 'addCampaignContact'],
+						operation: ['getCampaignContacts', 'getCampaignStats', 'addCampaignContact'],
 					},
 				},
 			},
@@ -781,11 +781,11 @@ export class Nuacom implements INodeType {
 							headers,
 							json: true,
 						});
-					} else if (operation === 'getCampaign') {
+					} else if (operation === 'getCampaignStats') {
 						const campaignId = this.getNodeParameter('campaignId', i) as string;
 						responseData = await this.helpers.httpRequest({
 							method: 'GET',
-							url: `${NUACOM_BASE_URL}/v2/auto-dialer/campaigns/${campaignId}`,
+							url: `${NUACOM_BASE_URL}/v2/auto-dialer/campaigns/${campaignId}/stats`,
 							headers,
 							json: true,
 						});
