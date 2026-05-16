@@ -40,7 +40,6 @@ export class Nuacom implements INodeType {
 					{ name: 'Contact', value: 'contact' },
 					{ name: 'Extension', value: 'extension' },
 					{ name: 'Message', value: 'message' },
-					{ name: 'NUACOM AI', value: 'nuacomAi' },
 					{ name: 'SMS', value: 'sms' },
 					{ name: 'Webhook Subscription', value: 'webhookSubscription' },
 				],
@@ -146,8 +145,9 @@ export class Nuacom implements INodeType {
 					{ name: 'Add Tag by ID', value: 'addTag', action: 'Add a tag to a call by tag info ID' },
 					{ name: 'Add Tag by Name', value: 'addTagByName', action: 'Add a tag to a call by name' },
 					{ name: 'Download Recording', value: 'downloadRecording', action: 'Download a call recording' },
-					{ name: 'Get Many', value: 'getAll', action: 'Get call logs' },
 					{ name: 'Get', value: 'get', action: 'Get a call log by ID' },
+					{ name: 'Get AI Data', value: 'getCallAiData', action: 'Get AI data for a call' },
+					{ name: 'Get Many', value: 'getAll', action: 'Get call logs' },
 				],
 			},
 			// Call Log — Get Many filters
@@ -230,7 +230,7 @@ export class Nuacom implements INodeType {
 				required: true,
 				displayOptions: {
 					show: {
-						resource: ['callLog', 'nuacomAi'],
+						resource: ['callLog'],
 						operation: ['get', 'downloadRecording', 'getCallAiData', 'addNote', 'addTag', 'addTagByName'],
 					},
 				},
@@ -502,18 +502,6 @@ export class Nuacom implements INodeType {
 				displayOptions: { show: { resource: ['autoDialer'], operation: ['addCampaignContact'] } },
 			},
 
-			// ── NUACOM AI ─────────────────────────────────────────────────────────
-			{
-				displayName: 'Operation',
-				name: 'operation',
-				type: 'options',
-				noDataExpression: true,
-				displayOptions: { show: { resource: ['nuacomAi'] } },
-				default: 'getCallAiData',
-				options: [
-					{ name: 'Get Call AI Data', value: 'getCallAiData', action: 'Get AI data for a call' },
-				],
-			},
 		],
 	};
 
@@ -669,6 +657,14 @@ export class Nuacom implements INodeType {
 							},
 							json: true,
 						});
+					} else if (operation === 'getCallAiData') {
+						const callId = this.getNodeParameter('callId', i) as string;
+						responseData = await this.helpers.httpRequest({
+							method: 'GET',
+							url: `${NUACOM_BASE_URL}/v2/calls/${callId}/ai-data`,
+							headers,
+							json: true,
+						});
 					}
 				} else if (resource === 'callback') {
 					const fromNumber = operation === 'dialAgent'
@@ -805,16 +801,6 @@ export class Nuacom implements INodeType {
 							url: `${NUACOM_BASE_URL}/v2/auto-dialer/campaign/${campaignId}/numbers`,
 							headers,
 							body: { number: contactNumber },
-							json: true,
-						});
-					}
-				} else if (resource === 'nuacomAi') {
-					if (operation === 'getCallAiData') {
-						const callId = this.getNodeParameter('callId', i) as string;
-						responseData = await this.helpers.httpRequest({
-							method: 'GET',
-							url: `${NUACOM_BASE_URL}/v2/calls/${callId}/ai-data`,
-							headers,
 							json: true,
 						});
 					}
