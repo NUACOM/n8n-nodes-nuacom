@@ -236,13 +236,22 @@ export class Nuacom implements INodeType {
 				},
 			},
 			{
-				displayName: 'From Number',
-				name: 'fromNumber',
+				displayName: 'Extension',
+				name: 'callbackExtension',
 				type: 'string',
 				default: '',
 				required: true,
-				description: 'Extension number (Dial Agent) or queue number (Dial Team) to initiate the callback from',
-				displayOptions: { show: { resource: ['callback'] } },
+				description: "Agent's extension number to initiate the callback from",
+				displayOptions: { show: { resource: ['callback'], operation: ['dialAgent'] } },
+			},
+			{
+				displayName: 'Queue Number',
+				name: 'callbackQueue',
+				type: 'string',
+				default: '',
+				required: true,
+				description: 'Queue number to initiate the callback from',
+				displayOptions: { show: { resource: ['callback'], operation: ['dialTeam'] } },
 			},
 			{
 				displayName: 'Destination Number',
@@ -662,14 +671,16 @@ export class Nuacom implements INodeType {
 						});
 					}
 				} else if (resource === 'callback') {
-					const callbackMethod = operation === 'dialAgent' ? 'extension' : 'queue';
+					const fromNumber = operation === 'dialAgent'
+						? this.getNodeParameter('callbackExtension', i) as string
+						: this.getNodeParameter('callbackQueue', i) as string;
 					responseData = await this.helpers.httpRequest({
 						method: 'POST',
 						url: `${NUACOM_BASE_URL}/v2/request-callback`,
 						headers,
 						body: {
-							method: callbackMethod,
-							from_number: this.getNodeParameter('fromNumber', i) as string,
+							method: operation === 'dialAgent' ? 'extension' : 'queue',
+							from_number: fromNumber,
 							dst_number: this.getNodeParameter('dstNumber', i) as string,
 						},
 						json: true,
