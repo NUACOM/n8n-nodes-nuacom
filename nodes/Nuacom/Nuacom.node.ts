@@ -640,7 +640,7 @@ export class Nuacom implements INodeType {
 							url: `${NUACOM_BASE_URL}/v2/call-tags`,
 							headers,
 							body: {
-								callId,
+								call_id: callId,
 								tag_info_id: this.getNodeParameter('tagInfoId', i) as number,
 							},
 							json: true,
@@ -652,7 +652,7 @@ export class Nuacom implements INodeType {
 							url: `${NUACOM_BASE_URL}/v2/call-tags/by-name`,
 							headers,
 							body: {
-								callId,
+								call_id: callId,
 								tag_name: this.getNodeParameter('tagName', i) as string,
 							},
 							json: true,
