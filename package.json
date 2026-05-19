@@ -6,10 +6,10 @@
     "n8n-community-node-package"
   ],
   "license": "MIT",
-  "homepage": "https://nuacom.ie",
+  "homepage": "https://nuacom.com",
   "author": {
     "name": "NUACOM",
-    "email": "support@nuacom.ie"
+    "email": "support@nuacom.com"
   },
   "repository": {
     "type": "git",

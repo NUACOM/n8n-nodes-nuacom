@@ -3,7 +3,7 @@
 [![npm version](https://img.shields.io/npm/v/n8n-nodes-nuacom)](https://www.npmjs.com/package/n8n-nodes-nuacom)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-An n8n community node package that provides seamless integration with the [NUACOM](https://nuacom.ie) API, enabling you to automate calls, SMS, contact management, and webhook subscriptions within your n8n workflows.
+An n8n community node package that provides seamless integration with the [NUACOM](https://nuacom.com) API, enabling you to automate calls, SMS, contact management, and webhook subscriptions within your n8n workflows.
 
 ## Features
 
@@ -229,8 +229,8 @@ This project is licensed under the MIT License — see the [LICENSE](./LICENSE) 
 For issues or questions:
 
 - **GitHub Issues**: [https://github.com/NUACOM/n8n-nodes-nuacom/issues](https://github.com/NUACOM/n8n-nodes-nuacom/issues)
-- **NUACOM Website**: [https://nuacom.ie](https://nuacom.ie)
-- **Email**: support@nuacom.ie
+- **NUACOM Website**: [https://nuacom.com](https://nuacom.com)
+- **Email**: support@nuacom.com
 
 ---
 
