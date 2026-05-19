@@ -121,9 +121,9 @@ export class Nuacom implements INodeType {
 				description: 'Number of results per page',
 				displayOptions: { show: { resource: ['contact'], operation: ['getAll'] } },
 				options: [
+					{ name: '100', value: 100 },
 					{ name: '15', value: 15 },
 					{ name: '50', value: 50 },
-					{ name: '100', value: 100 },
 					{ name: 'All', value: -1 },
 				],
 			},

@@ -115,8 +115,8 @@ export class NuacomTrigger implements INodeType {
 				description: 'Only trigger for a specific update type. Leave as "Any" to receive all.',
 				displayOptions: { show: { event: ['call_updated'] } },
 				options: [
-					{ name: 'Any', value: '' },
 					{ name: 'AI Analysis', value: 'ai_analysis' },
+					{ name: 'Any', value: '' },
 					{ name: 'Notes', value: 'notes' },
 					{ name: 'Tags', value: 'tags' },
 				],
