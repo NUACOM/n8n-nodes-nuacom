@@ -1,6 +1,6 @@
 {
   "name": "@nuacom/n8n-nodes-nuacom",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "NUACOM community nodes for n8n — webhook triggers and REST API actions",
   "keywords": [
     "n8n-community-node-package"
