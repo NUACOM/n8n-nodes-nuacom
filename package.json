@@ -13,7 +13,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/nuacom/n8n-nodes-nuacom"
+    "url": "https://github.com/NUACOM/n8n-nodes-nuacom"
   },
   "main": "index.js",
   "scripts": {
