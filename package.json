@@ -18,9 +18,9 @@
   "main": "index.js",
   "scripts": {
     "build": "tsc && npm run copy:icons",
-    "copy:icons": "copyfiles -u 0 \"nodes/**/*.svg\" dist/",
+    "copy:icons": "copyfiles -u 0 \"nodes/**/*.svg\" \"credentials/**/*.svg\" dist/",
     "dev": "tsc --watch",
-    "lint": "eslint nodes credentials --ext .ts",
+    "lint": "n8n-node lint",
     "prepublishOnly": "npm run build",
     "release": "n8n-node release"
   },
@@ -38,10 +38,11 @@
     ]
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@n8n/node-cli": "^0.31.0",
     "@types/node": "^20.0.0",
     "copyfiles": "^2.4.1",
-    "eslint": "^8.56.0",
+    "eslint": "^9.39.4",
     "n8n-workflow": "*",
     "typescript": "^5.3.0"
   },

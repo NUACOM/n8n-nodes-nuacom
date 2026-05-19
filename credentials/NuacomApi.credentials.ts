@@ -9,7 +9,8 @@ import { NUACOM_BASE_URL } from '../constants';
 export class NuacomApi implements ICredentialType {
 	name = 'nuacomApi';
 	displayName = 'NUACOM API';
-	documentationUrl = NUACOM_BASE_URL;
+	icon = 'file:nuacom.svg' as const;
+	documentationUrl = 'https://nuacom.com/developers';
 	properties: INodeProperties[] = [
 		{
 			displayName: 'API Key',

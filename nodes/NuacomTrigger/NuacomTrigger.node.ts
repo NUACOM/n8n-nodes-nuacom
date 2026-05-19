@@ -1,10 +1,10 @@
 import {
 	IHookFunctions,
-	IHttpRequestOptions,
 	INodeType,
 	INodeTypeDescription,
 	IWebhookFunctions,
 	IWebhookResponseData,
+	NodeConnectionTypes,
 	NodeOperationError,
 } from 'n8n-workflow';
 import { NUACOM_BASE_URL } from '../../constants';
@@ -36,9 +36,10 @@ export class NuacomTrigger implements INodeType {
 		group: ['trigger'],
 		version: 1,
 		description: 'Triggers a workflow when a NUACOM event occurs',
+		subtitle: '={{$parameter["event"]}}',
 		defaults: { name: 'NUACOM Trigger' },
 		inputs: [],
-		outputs: ['main'],
+		outputs: [NodeConnectionTypes.Main],
 		credentials: [
 			{
 				name: 'nuacomApi',
@@ -146,7 +147,7 @@ export class NuacomTrigger implements INodeType {
 				name: 'channel',
 				type: 'options',
 				default: '',
-				description: 'Only trigger for messages on this channel.',
+				description: 'Only trigger for messages on this channel',
 				displayOptions: { show: { event: MESSAGE_EVENTS } },
 				options: [
 					{ name: 'Any', value: '' },
@@ -164,6 +165,7 @@ export class NuacomTrigger implements INodeType {
 				displayOptions: { show: { event: MESSAGE_EVENTS } },
 			},
 		],
+		usableAsTool: true,
 	};
 
 	webhookMethods = {
@@ -174,13 +176,11 @@ export class NuacomTrigger implements INodeType {
 					return false;
 				}
 
-				const credentials = await this.getCredentials('nuacomApi');
-				const response = await this.helpers.httpRequest({
+				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 					method: 'GET',
 					url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions`,
-					headers: { 'X-Nuacom-Token': credentials.apiKey as string },
 					json: true,
-				} as IHttpRequestOptions);
+				});
 
 				const subscriptions: Array<{ id: number; type: string }> =
 					(response as { data: Array<{ id: number; type: string }> }).data ?? [];
@@ -200,20 +200,12 @@ export class NuacomTrigger implements INodeType {
 					);
 				}
 
-				const credentials = await this.getCredentials('nuacomApi');
-
-				const body = { type: event, url: webhookUrl };
-
-				const response = await this.helpers.httpRequest({
+				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 					method: 'POST',
 					url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions`,
-					headers: {
-						'X-Nuacom-Token': credentials.apiKey as string,
-						'Content-Type': 'application/json',
-					},
-					body,
+					body: { type: event, url: webhookUrl },
 					json: true,
-				} as IHttpRequestOptions);
+				});
 
 				const id = (response as { id: number }).id;
 				if (!id) {
@@ -235,15 +227,12 @@ export class NuacomTrigger implements INodeType {
 					return true;
 				}
 
-				const credentials = await this.getCredentials('nuacomApi');
-
 				try {
-					await this.helpers.httpRequest({
+					await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 						method: 'DELETE',
 						url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions/${webhookData.webhookId}`,
-						headers: { 'X-Nuacom-Token': credentials.apiKey as string },
 						json: true,
-					} as IHttpRequestOptions);
+					});
 				} catch {
 					return false;
 				}

@@ -1,10 +1,12 @@
 import {
 	IDataObject,
 	IExecuteFunctions,
-	IHttpRequestOptions,
 	INodeExecutionData,
 	INodeType,
 	INodeTypeDescription,
+	JsonObject,
+	NodeApiError,
+	NodeConnectionTypes,
 	NodeOperationError,
 } from 'n8n-workflow';
 import { NUACOM_BASE_URL } from '../../constants';
@@ -17,9 +19,10 @@ export class Nuacom implements INodeType {
 		group: ['transform'],
 		version: 1,
 		description: 'Interact with the NUACOM public API',
+		subtitle: '={{$parameter["resource"] + ": " + $parameter["operation"]}}',
 		defaults: { name: 'NUACOM' },
-		inputs: ['main'],
-		outputs: ['main'],
+		inputs: [NodeConnectionTypes.Main],
+		outputs: [NodeConnectionTypes.Main],
 		credentials: [
 			{
 				name: 'nuacomApi',
@@ -104,6 +107,7 @@ export class Nuacom implements INodeType {
 				displayName: 'Email',
 				name: 'email',
 				type: 'string',
+				placeholder: 'name@email.com',
 				default: '',
 				displayOptions: {
 					show: { resource: ['contact'], operation: ['create', 'update'] },
@@ -384,8 +388,8 @@ export class Nuacom implements INodeType {
 				options: [
 					{ name: 'Call Answered', value: 'call_answered' },
 					{ name: 'Call Completed', value: 'call_event' },
-					{ name: 'Call IVR Option Selected (Coming Soon)', value: 'ivr_option_selected' },
 					{ name: 'Call Initiated', value: 'call_initiated' },
+					{ name: 'Call IVR Option Selected (Coming Soon)', value: 'ivr_option_selected' },
 					{ name: 'Call Missed', value: 'call_missed' },
 					{ name: 'Call Updated', value: 'call_updated' },
 					{ name: 'Incoming Call', value: 'inbound_call_event' },
@@ -423,7 +427,7 @@ export class Nuacom implements INodeType {
 				options: [
 					{ name: 'Get', value: 'get', action: 'Get a message by ID' },
 					{ name: 'Get Conversation', value: 'getConversation', action: 'Get a conversation by ID' },
-					{ name: 'Send WhatsApp', value: 'sendWhatsapp', action: 'Send a WhatsApp message' },
+					{ name: 'Send WhatsApp', value: 'sendWhatsapp', action: 'Send a whats app message' },
 				],
 			},
 			{
@@ -503,13 +507,12 @@ export class Nuacom implements INodeType {
 			},
 
 		],
+		usableAsTool: true,
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
-		const credentials = await this.getCredentials('nuacomApi');
-		const headers = { 'X-Nuacom-Token': credentials.apiKey as string };
 
 		for (let i = 0; i < items.length; i++) {
 			const resource = this.getNodeParameter('resource', i) as string;
@@ -522,19 +525,17 @@ export class Nuacom implements INodeType {
 					if (operation === 'getAll') {
 						const perPage = this.getNodeParameter('perPage', i) as number;
 						const page = this.getNodeParameter('page', i) as number;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/contacts`,
-							headers,
 							qs: { page, perPage },
 							json: true,
-						} as IHttpRequestOptions);
+						});
 					} else if (operation === 'get') {
 						const contactId = this.getNodeParameter('contactId', i) as string;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/contacts/${contactId}`,
-							headers,
 							json: true,
 						});
 					} else if (operation === 'create') {
@@ -547,10 +548,9 @@ export class Nuacom implements INodeType {
 						if (lastName) body.last_name = lastName;
 						if (phone) body.phones = [phone];
 						if (email) body.email = email;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'POST',
 							url: `${NUACOM_BASE_URL}/v2/contacts`,
-							headers,
 							body,
 							json: true,
 						});
@@ -565,25 +565,23 @@ export class Nuacom implements INodeType {
 						if (lastName) body.last_name = lastName;
 						if (phone) body.phones = [phone];
 						if (email) body.email = email;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'PUT',
 							url: `${NUACOM_BASE_URL}/v2/contacts/${contactId}`,
-							headers,
 							body,
 							json: true,
 						});
 					} else if (operation === 'delete') {
 						const contactId = this.getNodeParameter('contactId', i) as string;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'DELETE',
 							url: `${NUACOM_BASE_URL}/v2/contacts/${contactId}`,
-							headers,
 							json: true,
 						});
 					}
 				} else if (resource === 'callLog') {
 					if (operation === 'getAll') {
-						const qs: Record<string, unknown> = {
+						const qs: IDataObject = {
 							page: this.getNodeParameter('callLogPage', i) as number,
 							per_page: this.getNodeParameter('callLogPerPage', i) as number,
 						};
@@ -599,34 +597,30 @@ export class Nuacom implements INodeType {
 						if (extension) qs.extensions = extension;
 						if (queue) qs.queues = queue;
 						if (number) qs.number = number;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/call-log`,
-							headers,
 							qs,
 							json: true,
-						} as IHttpRequestOptions);
+						});
 					} else if (operation === 'get') {
 						const callId = this.getNodeParameter('callId', i) as string;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/call-logs/${callId}`,
-							headers,
 							json: true,
 						});
 					} else if (operation === 'downloadRecording') {
 						const callId = this.getNodeParameter('callId', i) as string;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/call-recording/${callId}`,
-							headers,
 						});
 					} else if (operation === 'addNote') {
 						const callId = this.getNodeParameter('callId', i) as string;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'POST',
 							url: `${NUACOM_BASE_URL}/v2/call-notes`,
-							headers,
 							body: {
 								callId,
 								note: this.getNodeParameter('noteText', i) as string,
@@ -635,10 +629,9 @@ export class Nuacom implements INodeType {
 						});
 					} else if (operation === 'addTag') {
 						const callId = this.getNodeParameter('callId', i) as string;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'POST',
 							url: `${NUACOM_BASE_URL}/v2/call-tags`,
-							headers,
 							body: {
 								call_id: callId,
 								tag_info_id: this.getNodeParameter('tagInfoId', i) as number,
@@ -647,10 +640,9 @@ export class Nuacom implements INodeType {
 						});
 					} else if (operation === 'addTagByName') {
 						const callId = this.getNodeParameter('callId', i) as string;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'POST',
 							url: `${NUACOM_BASE_URL}/v2/call-tags/by-name`,
-							headers,
 							body: {
 								call_id: callId,
 								tag_name: this.getNodeParameter('tagName', i) as string,
@@ -659,10 +651,9 @@ export class Nuacom implements INodeType {
 						});
 					} else if (operation === 'getCallAiData') {
 						const callId = this.getNodeParameter('callId', i) as string;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/calls/${callId}/ai-data`,
-							headers,
 							json: true,
 						});
 					}
@@ -670,10 +661,9 @@ export class Nuacom implements INodeType {
 					const fromNumber = operation === 'dialAgent'
 						? this.getNodeParameter('callbackExtension', i) as string
 						: this.getNodeParameter('callbackQueue', i) as string;
-					responseData = await this.helpers.httpRequest({
+					responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 						method: 'POST',
 						url: `${NUACOM_BASE_URL}/v2/request-callback`,
-						headers,
 						body: {
 							method: operation === 'dialAgent' ? 'extension' : 'queue',
 							from_number: fromNumber,
@@ -682,10 +672,9 @@ export class Nuacom implements INodeType {
 						json: true,
 					});
 				} else if (resource === 'extension') {
-					responseData = await this.helpers.httpRequest({
+					responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 						method: 'GET',
 						url: `${NUACOM_BASE_URL}/v2/extensions`,
-						headers,
 						json: true,
 					});
 				} else if (resource === 'sms') {
@@ -694,19 +683,17 @@ export class Nuacom implements INodeType {
 						to: [{ number: this.getNodeParameter('smsTo', i) as string }],
 						message: this.getNodeParameter('smsMessage', i) as string,
 					};
-					responseData = await this.helpers.httpRequest({
+					responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 						method: 'POST',
 						url: `${NUACOM_BASE_URL}/v2/sms/send`,
-						headers,
 						body,
 						json: true,
 					});
 				} else if (resource === 'webhookSubscription') {
 					if (operation === 'getAll') {
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions`,
-							headers,
 							json: true,
 						});
 					} else if (operation === 'create') {
@@ -719,10 +706,9 @@ export class Nuacom implements INodeType {
 								{ itemIndex: i },
 							);
 						}
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'POST',
 							url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions`,
-							headers,
 							body: {
 								type: webhookType,
 								url: this.getNodeParameter('webhookUrl', i) as string,
@@ -731,10 +717,9 @@ export class Nuacom implements INodeType {
 						});
 					} else if (operation === 'delete') {
 						const subscriptionId = this.getNodeParameter('subscriptionId', i) as string;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'DELETE',
 							url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions/${subscriptionId}`,
-							headers,
 							json: true,
 						});
 					}
@@ -745,61 +730,54 @@ export class Nuacom implements INodeType {
 							to: this.getNodeParameter('messageTo', i) as string,
 							content: this.getNodeParameter('messageContent', i) as string,
 						};
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'POST',
 							url: `${NUACOM_BASE_URL}/v2/conversations`,
-							headers,
 							body,
 							json: true,
 						});
 					} else if (operation === 'get') {
 						const messageId = this.getNodeParameter('messageId', i) as string;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/conversations/messages/${messageId}`,
-							headers,
 							json: true,
 						});
 					} else if (operation === 'getConversation') {
 						const conversationId = this.getNodeParameter('conversationId', i) as string;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/conversations/${conversationId}`,
-							headers,
 							json: true,
 						});
 					}
 				} else if (resource === 'autoDialer') {
 					if (operation === 'getCampaigns') {
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/auto-dialer/campaigns`,
-							headers,
 							json: true,
 						});
 					} else if (operation === 'getCampaignStats') {
 						const campaignId = this.getNodeParameter('campaignId', i) as string;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/auto-dialer/campaigns/${campaignId}/stats`,
-							headers,
 							json: true,
 						});
 					} else if (operation === 'getCampaignContacts') {
 						const campaignId = this.getNodeParameter('campaignId', i) as string;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/auto-dialer/campaign/${campaignId}/numbers`,
-							headers,
 							json: true,
 						});
 					} else if (operation === 'addCampaignContact') {
 						const campaignId = this.getNodeParameter('campaignId', i) as string;
 						const contactNumber = this.getNodeParameter('contactNumber', i) as string;
-						responseData = await this.helpers.httpRequest({
+						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'POST',
 							url: `${NUACOM_BASE_URL}/v2/auto-dialer/campaign/${campaignId}/numbers`,
-							headers,
 							body: { number: contactNumber },
 							json: true,
 						});
@@ -812,7 +790,7 @@ export class Nuacom implements INodeType {
 					returnData.push({ json: { error: (error as Error).message }, pairedItem: i });
 					continue;
 				}
-				throw error;
+				throw new NodeApiError(this.getNode(), error as JsonObject, { itemIndex: i });
 			}
 
 			const items2: unknown[] = Array.isArray(responseData)
