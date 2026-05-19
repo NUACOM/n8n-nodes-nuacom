@@ -234,4 +234,4 @@ For issues or questions:
 
 ---
 
-Made with ❤️ by the NUACOM team
+Made with ❤️ by the NUACOM team.
