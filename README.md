@@ -1,6 +1,6 @@
-# n8n-nodes-nuacom
+# @nuacom/n8n-nodes-nuacom
 
-[![npm version](https://img.shields.io/npm/v/n8n-nodes-nuacom)](https://www.npmjs.com/package/n8n-nodes-nuacom)
+[![npm version](https://img.shields.io/npm/v/@nuacom/n8n-nodes-nuacom)](https://www.npmjs.com/package/@nuacom/n8n-nodes-nuacom)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 An n8n community node package that provides seamless integration with the [NUACOM](https://nuacom.com) API, enabling you to automate calls, SMS, contact management, and webhook subscriptions within your n8n workflows.
@@ -83,7 +83,7 @@ A webhook trigger node that automatically starts workflows when NUACOM events oc
 This node is available in the n8n community nodes catalog. You can install it directly from the n8n interface:
 
 1. Go to **Settings** → **Community Nodes**
-2. Search for `n8n-nodes-nuacom`
+2. Search for `@nuacom/n8n-nodes-nuacom`
 3. Click **Install**
 
 ### For Self-Hosted n8n
@@ -91,13 +91,13 @@ This node is available in the n8n community nodes catalog. You can install it di
 If you're running a self-hosted instance of n8n, install this package in your n8n installation directory:
 
 ```bash
-npm install n8n-nodes-nuacom
+npm install @nuacom/n8n-nodes-nuacom
 ```
 
 Or if you're using n8n via Docker:
 
 ```bash
-docker exec -it <container-name> npm install n8n-nodes-nuacom
+docker exec -it <container-name> npm install @nuacom/n8n-nodes-nuacom
 ```
 
 ## Configuration
@@ -170,8 +170,8 @@ Trigger an outbound callback to a customer the moment they fill in a contact for
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/NUACOM/n8n-nodes-nuacom.git
-cd n8n-nodes-nuacom
+git clone https://github.com/NUACOM/@nuacom/n8n-nodes-nuacom.git
+cd @nuacom/n8n-nodes-nuacom
 ```
 
 2. Install dependencies:
@@ -196,7 +196,7 @@ npm run build
 ### Project Structure
 
 ```
-n8n-nodes-nuacom/
+@nuacom/n8n-nodes-nuacom/
 ├── nodes/
 │   ├── Nuacom/
 │   │   ├── Nuacom.node.ts        # Main action node
@@ -228,7 +228,7 @@ This project is licensed under the MIT License — see the [LICENSE](./LICENSE) 
 
 For issues or questions:
 
-- **GitHub Issues**: [https://github.com/NUACOM/n8n-nodes-nuacom/issues](https://github.com/NUACOM/n8n-nodes-nuacom/issues)
+- **GitHub Issues**: [https://github.com/NUACOM/@nuacom/n8n-nodes-nuacom/issues](https://github.com/NUACOM/@nuacom/n8n-nodes-nuacom/issues)
 - **NUACOM Website**: [https://nuacom.com](https://nuacom.com)
 - **Email**: support@nuacom.com
 
