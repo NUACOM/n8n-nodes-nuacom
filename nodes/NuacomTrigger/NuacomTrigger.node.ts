@@ -4,6 +4,8 @@ import {
 	INodeTypeDescription,
 	IWebhookFunctions,
 	IWebhookResponseData,
+	JsonObject,
+	NodeApiError,
 	NodeConnectionTypes,
 	NodeOperationError,
 } from 'n8n-workflow';
@@ -233,8 +235,8 @@ export class NuacomTrigger implements INodeType {
 						url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions/${webhookData.webhookId}`,
 						json: true,
 					});
-				} catch {
-					return false;
+				} catch (error) {
+					throw new NodeApiError(this.getNode(), error as JsonObject);
 				}
 
 				delete webhookData.webhookId;
