@@ -1,5 +1,7 @@
 import {
 	IHookFunctions,
+	ILoadOptionsFunctions,
+	INodePropertyOptions,
 	INodeType,
 	INodeTypeDescription,
 	IWebhookFunctions,
@@ -82,17 +84,19 @@ export class NuacomTrigger implements INodeType {
 			{
 				displayName: 'Queue',
 				name: 'queue',
-				type: 'string',
+				type: 'options',
 				default: '',
-				description: 'Only trigger for calls in this queue. Leave empty for all queues.',
+				description: 'Only trigger for calls in this queue. Select a queue or leave as "Any" for all.',
+				typeOptions: { loadOptionsMethod: 'getQueues' },
 				displayOptions: { show: { event: CALL_EVENTS } },
 			},
 			{
 				displayName: 'Extension',
 				name: 'extension',
-				type: 'string',
+				type: 'options',
 				default: '',
-				description: 'Only trigger for calls involving this extension number. Leave empty for all extensions.',
+				description: 'Only trigger for calls involving this extension. Select an extension or leave as "Any" for all.',
+				typeOptions: { loadOptionsMethod: 'getExtensions' },
 				displayOptions: { show: { event: CALL_EVENTS } },
 			},
 			// Call Updated filters
@@ -168,6 +172,36 @@ export class NuacomTrigger implements INodeType {
 			},
 		],
 		usableAsTool: true,
+	};
+
+	methods = {
+		loadOptions: {
+			async getQueues(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
+					method: 'GET',
+					url: `${NUACOM_BASE_URL}/v2/queues`,
+					json: true,
+				});
+				const queues = (response as Array<{ number: string; name: string }>) ?? [];
+				return [
+					{ name: 'Any Queue', value: '' },
+					...queues.map((q) => ({ name: `${q.number} — ${q.name}`, value: q.number })),
+				];
+			},
+
+			async getExtensions(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
+					method: 'GET',
+					url: `${NUACOM_BASE_URL}/v2/extensions`,
+					json: true,
+				});
+				const extensions = (response as Array<{ number: number; name: string }>) ?? [];
+				return [
+					{ name: 'Any Extension', value: '' },
+					...extensions.map((e) => ({ name: `${e.number} — ${e.name}`, value: String(e.number) })),
+				];
+			},
+		},
 	};
 
 	webhookMethods = {
@@ -257,13 +291,17 @@ export class NuacomTrigger implements INodeType {
 			if (direction && bodyData.call_direction !== direction) {
 				return {};
 			}
-			if (queue && bodyData.call_in_queue !== queue) {
-				return {};
+			if (queue) {
+				const callInQueue = String(bodyData.call_in_queue ?? '');
+				const escaped = queue.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+				if (!new RegExp(`\\b${escaped}\\b`).test(callInQueue)) {
+					return {};
+				}
 			}
 			if (extension) {
-				const localCaller = String(bodyData.call_caller_number_local ?? '');
-				const localCallee = String(bodyData.call_callee_number_local ?? '');
-				if (localCaller !== extension && localCallee !== extension) {
+				const answeredBy = String(bodyData.call_answered_by ?? '');
+				const initiatedBy = String(bodyData.call_initiated_by ?? '');
+				if (answeredBy !== extension && initiatedBy !== extension) {
 					return {};
 				}
 			}
