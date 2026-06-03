@@ -1,7 +1,9 @@
 import {
 	IDataObject,
 	IExecuteFunctions,
+	ILoadOptionsFunctions,
 	INodeExecutionData,
+	INodePropertyOptions,
 	INodeType,
 	INodeTypeDescription,
 	JsonObject,
@@ -135,6 +137,33 @@ export class Nuacom implements INodeType {
 				description: 'Page number to retrieve',
 				displayOptions: { show: { resource: ['contact'], operation: ['getAll'] } },
 			},
+			{
+				displayName: 'Phone',
+				name: 'contactPhone',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. 0551234567',
+				description: 'Filter by mobile phone number (partial match). Leave empty for all.',
+				displayOptions: { show: { resource: ['contact'], operation: ['getAll'] } },
+			},
+			{
+				displayName: 'Contact IDs',
+				name: 'contactFilterIds',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. 1,2,3',
+				description: 'Filter by one or more contact IDs, comma-separated. Leave empty for all.',
+				displayOptions: { show: { resource: ['contact'], operation: ['getAll'] } },
+			},
+			{
+				displayName: 'Search',
+				name: 'contactSearch',
+				type: 'string',
+				default: '',
+				placeholder: 'e.g. John',
+				description: 'Search contacts by name, phone, or email. Leave empty for all.',
+				displayOptions: { show: { resource: ['contact'], operation: ['getAll'] } },
+			},
 
 			// ── Call Log ──────────────────────────────────────────────────────────
 			{
@@ -145,9 +174,8 @@ export class Nuacom implements INodeType {
 				displayOptions: { show: { resource: ['callLog'] } },
 				default: 'getAll',
 				options: [
+					{ name: 'Add Call Tag', value: 'addCallTag', action: 'Add a tag to a call' },
 					{ name: 'Add Note', value: 'addNote', action: 'Add a note to a call' },
-					{ name: 'Add Tag by ID', value: 'addTag', action: 'Add a tag to a call by tag info ID' },
-					{ name: 'Add Tag by Name', value: 'addTagByName', action: 'Add a tag to a call by name' },
 					{ name: 'Download Recording', value: 'downloadRecording', action: 'Download a call recording' },
 					{ name: 'Get', value: 'get', action: 'Get a call log by ID' },
 					{ name: 'Get AI Data', value: 'getCallAiData', action: 'Get AI data for a call' },
@@ -235,7 +263,7 @@ export class Nuacom implements INodeType {
 				displayOptions: {
 					show: {
 						resource: ['callLog'],
-						operation: ['get', 'downloadRecording', 'getCallAiData', 'addNote', 'addTag', 'addTagByName'],
+						operation: ['get', 'downloadRecording', 'getCallAiData', 'addNote', 'addCallTag'],
 					},
 				},
 			},
@@ -278,22 +306,14 @@ export class Nuacom implements INodeType {
 				displayOptions: { show: { resource: ['callLog'], operation: ['addNote'] } },
 			},
 			{
-				displayName: 'Tag Info ID',
-				name: 'tagInfoId',
-				type: 'number',
-				default: 0,
-				required: true,
-				description: 'ID of the tag definition to apply',
-				displayOptions: { show: { resource: ['callLog'], operation: ['addTag'] } },
-			},
-			{
-				displayName: 'Tag Name',
-				name: 'tagName',
-				type: 'string',
+				displayName: 'Tag Name or ID',
+				name: 'callTagId',
+				type: 'options',
 				default: '',
 				required: true,
-				description: 'Name of the tag to apply (created automatically if it does not exist)',
-				displayOptions: { show: { resource: ['callLog'], operation: ['addTagByName'] } },
+				description: 'Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>',
+				typeOptions: { loadOptionsMethod: 'getCallTags' },
+				displayOptions: { show: { resource: ['callLog'], operation: ['addCallTag'] } },
 			},
 
 			// ── Callback ──────────────────────────────────────────────────────────
@@ -510,6 +530,21 @@ export class Nuacom implements INodeType {
 		usableAsTool: true,
 	};
 
+	methods = {
+		loadOptions: {
+			async getCallTags(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
+					method: 'GET',
+					url: `${NUACOM_BASE_URL}/v3/call-tags/all-parent-child`,
+					
+					json: true,
+				});
+				const tags = (Array.isArray(response) ? response : []) as Array<{ id: number; name: string }>;
+				return (tags as Array<{ id: number; name: string }>).map((t) => ({ name: t.name, value: t.id }));
+			},
+		},
+	};
+
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
@@ -525,10 +560,17 @@ export class Nuacom implements INodeType {
 					if (operation === 'getAll') {
 						const perPage = this.getNodeParameter('perPage', i) as number;
 						const page = this.getNodeParameter('page', i) as number;
+						const phone = (this.getNodeParameter('contactPhone', i) as string).trim();
+						const contactFilterIds = (this.getNodeParameter('contactFilterIds', i) as string).trim();
+						const contactSearch = (this.getNodeParameter('contactSearch', i) as string).trim();
+						const qs: Record<string, string | number> = { page, perPage };
+						if (phone) qs['filter[number_1]'] = phone;
+						if (contactFilterIds) qs['filter[contact_ids]'] = contactFilterIds;
+						if (contactSearch) qs['filter[search]'] = contactSearch;
 						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/contacts`,
-							qs: { page, perPage },
+							qs,
 							json: true,
 						});
 					} else if (operation === 'get') {
@@ -627,25 +669,14 @@ export class Nuacom implements INodeType {
 							},
 							json: true,
 						});
-					} else if (operation === 'addTag') {
+					} else if (operation === 'addCallTag') {
 						const callId = this.getNodeParameter('callId', i) as string;
 						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'POST',
 							url: `${NUACOM_BASE_URL}/v2/call-tags`,
 							body: {
 								call_id: callId,
-								tag_info_id: this.getNodeParameter('tagInfoId', i) as number,
-							},
-							json: true,
-						});
-					} else if (operation === 'addTagByName') {
-						const callId = this.getNodeParameter('callId', i) as string;
-						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
-							method: 'POST',
-							url: `${NUACOM_BASE_URL}/v2/call-tags/by-name`,
-							body: {
-								call_id: callId,
-								tag_name: this.getNodeParameter('tagName', i) as string,
+								tag_info_id: this.getNodeParameter('callTagId', i) as number,
 							},
 							json: true,
 						});
@@ -793,9 +824,10 @@ export class Nuacom implements INodeType {
 				throw new NodeApiError(this.getNode(), error as JsonObject, { itemIndex: i });
 			}
 
-			const items2: unknown[] = Array.isArray(responseData)
+			const rawItems = Array.isArray(responseData)
 				? responseData
-				: [(responseData as { data?: unknown }).data ?? responseData];
+				: ((responseData as { data?: unknown }).data ?? responseData);
+			const items2: unknown[] = Array.isArray(rawItems) ? rawItems : [rawItems];
 
 			returnData.push(
 				...items2.map((item) => ({ json: item as IDataObject, pairedItem: i })),
