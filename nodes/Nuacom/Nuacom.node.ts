@@ -13,6 +13,17 @@ import {
 } from 'n8n-workflow';
 import { NUACOM_BASE_URL } from '../../constants';
 
+/**
+ * Read a node parameter and return it as a trimmed string. Parameters bound to
+ * expressions (e.g. a field from a trigger) can resolve to null or a number, so
+ * the value is coerced to a string before trimming to avoid runtime errors.
+ */
+function getTrimmedParam(ctx: IExecuteFunctions, name: string, index: number): string {
+	const value = ctx.getNodeParameter(name, index, '');
+
+	return value === null || value === undefined ? '' : String(value).trim();
+}
+
 export class Nuacom implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'NUACOM',
@@ -142,8 +153,8 @@ export class Nuacom implements INodeType {
 				name: 'contactPhone',
 				type: 'string',
 				default: '',
-				placeholder: 'e.g. 0551234567',
-				description: 'Filter by mobile phone number (partial match). Leave empty for all.',
+				placeholder: 'e.g. 353861234567',
+				description: 'Filter by phone number (any type — mobile or landline), matched as a substring of the stored digits. Formatting like +, spaces, or a leading 00 is ignored. Leave empty for all.',
 				displayOptions: { show: { resource: ['contact'], operation: ['getAll'] } },
 			},
 			{
@@ -156,12 +167,12 @@ export class Nuacom implements INodeType {
 				displayOptions: { show: { resource: ['contact'], operation: ['getAll'] } },
 			},
 			{
-				displayName: 'Search',
+				displayName: 'Name',
 				name: 'contactSearch',
 				type: 'string',
 				default: '',
 				placeholder: 'e.g. John',
-				description: 'Search contacts by name, phone, or email. Leave empty for all.',
+				description: 'Filter contacts by name. Leave empty for all.',
 				displayOptions: { show: { resource: ['contact'], operation: ['getAll'] } },
 			},
 
@@ -560,12 +571,21 @@ export class Nuacom implements INodeType {
 					if (operation === 'getAll') {
 						const perPage = this.getNodeParameter('perPage', i) as number;
 						const page = this.getNodeParameter('page', i) as number;
-						const phone = (this.getNodeParameter('contactPhone', i) as string).trim();
-						const contactFilterIds = (this.getNodeParameter('contactFilterIds', i) as string).trim();
-						const contactSearch = (this.getNodeParameter('contactSearch', i) as string).trim();
+						const phone = getTrimmedParam(this, 'contactPhone', i);
+						const contactFilterIds = getTrimmedParam(this, 'contactFilterIds', i);
+						const contactSearch = getTrimmedParam(this, 'contactSearch', i);
 						const qs: Record<string, string | number> = { page, perPage };
-						if (phone) qs['filter[number_1]'] = phone;
-						if (contactFilterIds) qs['filter[contact_ids]'] = contactFilterIds;
+						if (phone) qs['filter[phone]'] = phone;
+						if (contactFilterIds) {
+							// API expects contact_ids as an array, so send each id as an indexed key
+							contactFilterIds
+								.split(',')
+								.map((id) => id.trim())
+								.filter((id) => id !== '')
+								.forEach((id, idx) => {
+									qs[`filter[contact_ids][${idx}]`] = id;
+								});
+						}
 						if (contactSearch) qs['filter[search]'] = contactSearch;
 						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'GET',
@@ -581,10 +601,10 @@ export class Nuacom implements INodeType {
 							json: true,
 						});
 					} else if (operation === 'create') {
-						const firstName = (this.getNodeParameter('firstName', i) as string).trim();
-						const lastName = (this.getNodeParameter('lastName', i) as string).trim();
-						const phone = (this.getNodeParameter('phone', i) as string).trim();
-						const email = (this.getNodeParameter('email', i) as string).trim();
+						const firstName = getTrimmedParam(this, 'firstName', i);
+						const lastName = getTrimmedParam(this, 'lastName', i);
+						const phone = getTrimmedParam(this, 'phone', i);
+						const email = getTrimmedParam(this, 'email', i);
 						const body: Record<string, unknown> = {};
 						if (firstName) body.first_name = firstName;
 						if (lastName) body.last_name = lastName;
@@ -598,10 +618,10 @@ export class Nuacom implements INodeType {
 						});
 					} else if (operation === 'update') {
 						const contactId = this.getNodeParameter('contactId', i) as string;
-						const firstName = (this.getNodeParameter('firstName', i) as string).trim();
-						const lastName = (this.getNodeParameter('lastName', i) as string).trim();
-						const phone = (this.getNodeParameter('phone', i) as string).trim();
-						const email = (this.getNodeParameter('email', i) as string).trim();
+						const firstName = getTrimmedParam(this, 'firstName', i);
+						const lastName = getTrimmedParam(this, 'lastName', i);
+						const phone = getTrimmedParam(this, 'phone', i);
+						const email = getTrimmedParam(this, 'email', i);
 						const body: Record<string, unknown> = {};
 						if (firstName) body.first_name = firstName;
 						if (lastName) body.last_name = lastName;
@@ -627,12 +647,12 @@ export class Nuacom implements INodeType {
 							page: this.getNodeParameter('callLogPage', i) as number,
 							per_page: this.getNodeParameter('callLogPerPage', i) as number,
 						};
-						const dateFrom = (this.getNodeParameter('callLogDateFrom', i) as string).trim();
-						const dateTo = (this.getNodeParameter('callLogDateTo', i) as string).trim();
+						const dateFrom = getTrimmedParam(this, 'callLogDateFrom', i);
+						const dateTo = getTrimmedParam(this, 'callLogDateTo', i);
 						const callType = this.getNodeParameter('callLogType', i) as string;
-						const extension = (this.getNodeParameter('callLogExtension', i) as string).trim();
-						const queue = (this.getNodeParameter('callLogQueue', i) as string).trim();
-						const number = (this.getNodeParameter('callLogNumber', i) as string).trim();
+						const extension = getTrimmedParam(this, 'callLogExtension', i);
+						const queue = getTrimmedParam(this, 'callLogQueue', i);
+						const number = getTrimmedParam(this, 'callLogNumber', i);
 						if (dateFrom) qs.from_date = dateFrom;
 						if (dateTo) qs.to_date = dateTo;
 						if (callType) qs.type = callType;
