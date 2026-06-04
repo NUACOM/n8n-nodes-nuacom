@@ -13,6 +13,17 @@ import {
 } from 'n8n-workflow';
 import { NUACOM_BASE_URL } from '../../constants';
 
+/**
+ * Read a node parameter and return it as a trimmed string. Parameters bound to
+ * expressions can resolve to null or a number, so the value is coerced to a
+ * string before trimming to avoid runtime errors.
+ */
+function getTrimmedParam(ctx: IWebhookFunctions, name: string): string {
+	const value = ctx.getNodeParameter(name, '');
+
+	return value === null || value === undefined ? '' : String(value).trim();
+}
+
 const EVENT_TYPES = [
 	{ name: 'Call Answered', value: 'call_answered' },
 	{ name: 'Call Completed', value: 'call_event' },
@@ -285,8 +296,8 @@ export class NuacomTrigger implements INodeType {
 
 		if (CALL_EVENTS.includes(event)) {
 			const direction = this.getNodeParameter('direction', '') as string;
-			const queue = (this.getNodeParameter('queue', '') as string).trim();
-			const extension = (this.getNodeParameter('extension', '') as string).trim();
+			const queue = getTrimmedParam(this, 'queue');
+			const extension = getTrimmedParam(this, 'extension');
 
 			if (direction && bodyData.call_direction !== direction) {
 				return {};
@@ -321,7 +332,7 @@ export class NuacomTrigger implements INodeType {
 
 		if (MESSAGE_EVENTS.includes(event)) {
 			const channel = this.getNodeParameter('channel', '') as string;
-			const messageContains = (this.getNodeParameter('messageContains', '') as string).trim().toLowerCase();
+			const messageContains = getTrimmedParam(this, 'messageContains').toLowerCase();
 			if (channel && bodyData.channel !== channel) {
 				return {};
 			}
