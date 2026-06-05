@@ -472,14 +472,56 @@ export class Nuacom implements INodeType {
 				displayOptions: { show: { resource: ['message'], operation: ['sendWhatsapp'] } },
 			},
 			{
-				displayName: 'Content',
-				name: 'messageContent',
-				type: 'string',
-				typeOptions: { rows: 4 },
+				displayName: 'Sender Name or ID',
+				name: 'whatsappSender',
+				type: 'options',
 				default: '',
 				required: true,
-				description: 'Message text to send',
+				description: 'WhatsApp sender number to send from. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				typeOptions: { loadOptionsMethod: 'getWhatsappSenders' },
 				displayOptions: { show: { resource: ['message'], operation: ['sendWhatsapp'] } },
+			},
+			{
+				displayName: 'Template Name or ID',
+				name: 'whatsappTemplate',
+				type: 'options',
+				default: '',
+				required: true,
+				description: 'Approved WhatsApp template to send. WhatsApp does not allow free-form messages. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				typeOptions: { loadOptionsMethod: 'getWhatsappTemplates' },
+				displayOptions: { show: { resource: ['message'], operation: ['sendWhatsapp'] } },
+			},
+			{
+				displayName: 'Template Variables',
+				name: 'whatsappTemplateVariables',
+				type: 'fixedCollection',
+				typeOptions: { multipleValues: true, sortable: true },
+				default: {},
+				placeholder: 'Add Variable',
+				description: 'Values for the template placeholders. The Key must match the placeholder in the template body — numeric ({{1}}, {{2}}) or named ({{first_name}}). Leave empty if the template has none.',
+				displayOptions: { show: { resource: ['message'], operation: ['sendWhatsapp'] } },
+				options: [
+					{
+						name: 'variable',
+						displayName: 'Variable',
+						values: [
+							{
+								displayName: 'Key',
+								name: 'key',
+								type: 'string',
+								default: '',
+								placeholder: 'e.g. 1 or first_name',
+								description: 'Placeholder key as it appears between {{ }} in the template',
+							},
+							{
+								displayName: 'Value',
+								name: 'value',
+								type: 'string',
+								default: '',
+							},
+						],
+					},
+				],
 			},
 			{
 				displayName: 'Message ID',
@@ -552,6 +594,36 @@ export class Nuacom implements INodeType {
 				});
 				const tags = (Array.isArray(response) ? response : []) as Array<{ id: number; name: string }>;
 				return (tags as Array<{ id: number; name: string }>).map((t) => ({ name: t.name, value: t.id }));
+			},
+
+			async getWhatsappTemplates(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				// status=1 → only Approved templates; WhatsApp rejects sending non-approved ones
+				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
+					method: 'GET',
+					url: `${NUACOM_BASE_URL}/v2/integrations/whatsapp/templates`,
+					qs: { status: 1, per_page: 100 },
+					json: true,
+				});
+				const templates = (response as { data?: Array<{ id: number; name: string; language?: string }> }).data ?? [];
+				return templates.map((t) => ({
+					name: t.language ? `${t.name} (${t.language})` : t.name,
+					value: t.id,
+				}));
+			},
+
+			async getWhatsappSenders(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
+					method: 'GET',
+					url: `${NUACOM_BASE_URL}/v2/integrations/whatsapp`,
+					json: true,
+				});
+				const numbers = (response as { data?: { phone_numbers?: Array<{ phone_number: string; display_name?: string; status?: string }> } }).data?.phone_numbers ?? [];
+				return numbers
+					.filter((n) => n.status === 'Approved')
+					.map((n) => ({
+						name: n.display_name ? `${n.phone_number} (${n.display_name})` : n.phone_number,
+						value: n.phone_number,
+					}));
 			},
 		},
 	};
@@ -776,10 +848,38 @@ export class Nuacom implements INodeType {
 					}
 				} else if (resource === 'message') {
 					if (operation === 'sendWhatsapp') {
+						const metadata: { template_id: number; template_variables?: Record<string, string> } = {
+							template_id: this.getNodeParameter('whatsappTemplate', i) as number,
+						};
+						const variablesInput = this.getNodeParameter(
+							'whatsappTemplateVariables.variable',
+							i,
+							[],
+						) as Array<{ key: string; value: string }>;
+						if (variablesInput.length > 0) {
+							// Twilio Content API expects ContentVariables as an object keyed by the
+							// template placeholder ({{1}} or {{name}}), so map each Key → Value.
+							const templateVariables: Record<string, string> = {};
+							variablesInput.forEach((v) => {
+								const key = String(v.key ?? '').trim();
+								if (key !== '') {
+									templateVariables[key] = String(v.value ?? '');
+								}
+							});
+							if (Object.keys(templateVariables).length > 0) {
+								metadata.template_variables = templateVariables;
+							}
+						}
 						const body = {
-							channel_type: 'whatsapp',
-							to: this.getNodeParameter('messageTo', i) as string,
-							content: this.getNodeParameter('messageContent', i) as string,
+							channel_type: 2, // WhatsApp
+							sender_id: this.getNodeParameter('whatsappSender', i) as string,
+							participants: [
+								{
+									participant_type: 'phone_number',
+									participant_id: getTrimmedParam(this, 'messageTo', i),
+								},
+							],
+							message: { metadata },
 						};
 						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'POST',
