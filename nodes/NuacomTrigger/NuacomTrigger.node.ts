@@ -318,6 +318,13 @@ export class NuacomTrigger implements INodeType {
 			}
 		}
 
+		// "Call Completed" subscribes to the generic call_event, which the backend
+		// fires on every state change (initiated, answered, terminated). Only emit
+		// once the call has actually ended.
+		if (event === 'call_event' && String(bodyData.call_terminated ?? '') !== '1') {
+			return {};
+		}
+
 		if (event === 'call_updated') {
 			const direction = this.getNodeParameter('callUpdatedDirection', '') as string;
 			const updateType = this.getNodeParameter('callUpdatedType', '') as string;

@@ -781,16 +781,18 @@ export class Nuacom implements INodeType {
 						});
 					}
 				} else if (resource === 'callback') {
+					// Coerce to string — the API requires from_number/dst_number as strings,
+					// but trigger expressions can resolve to a number (e.g. extension 40).
 					const fromNumber = operation === 'dialAgent'
-						? this.getNodeParameter('callbackExtension', i) as string
-						: this.getNodeParameter('callbackQueue', i) as string;
+						? getTrimmedParam(this, 'callbackExtension', i)
+						: getTrimmedParam(this, 'callbackQueue', i);
 					responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 						method: 'POST',
 						url: `${NUACOM_BASE_URL}/v2/request-callback`,
 						body: {
 							method: operation === 'dialAgent' ? 'extension' : 'queue',
 							from_number: fromNumber,
-							dst_number: this.getNodeParameter('dstNumber', i) as string,
+							dst_number: getTrimmedParam(this, 'dstNumber', i),
 						},
 						json: true,
 					});
