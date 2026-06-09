@@ -556,6 +556,14 @@ export class Nuacom implements INodeType {
 				],
 			},
 			{
+				displayName: 'Page',
+				name: 'campaignsPage',
+				type: 'number',
+				default: 1,
+				description: 'Page number to retrieve (15 campaigns per page)',
+				displayOptions: { show: { resource: ['autoDialer'], operation: ['getCampaigns'] } },
+			},
+			{
 				displayName: 'Campaign ID',
 				name: 'campaignId',
 				type: 'string',
@@ -765,7 +773,7 @@ export class Nuacom implements INodeType {
 						const callId = this.getNodeParameter('callId', i) as string;
 						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'POST',
-							url: `${NUACOM_BASE_URL}/v2/call-tags`,
+							url: `${NUACOM_BASE_URL}/v2/add-call-tag`,
 							body: {
 								call_id: callId,
 								tag_info_id: this.getNodeParameter('callTagId', i) as number,
@@ -906,9 +914,11 @@ export class Nuacom implements INodeType {
 					}
 				} else if (resource === 'autoDialer') {
 					if (operation === 'getCampaigns') {
+						// Endpoint is paginated at a fixed 15/page (per_page is ignored).
 						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 							method: 'GET',
 							url: `${NUACOM_BASE_URL}/v2/auto-dialer/campaigns`,
+							qs: { page: this.getNodeParameter('campaignsPage', i) as number },
 							json: true,
 						});
 					} else if (operation === 'getCampaignStats') {
