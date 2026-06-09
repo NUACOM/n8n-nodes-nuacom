@@ -57,7 +57,6 @@ export class Nuacom implements INodeType {
 					{ name: 'Extension', value: 'extension' },
 					{ name: 'Message', value: 'message' },
 					{ name: 'SMS', value: 'sms' },
-					{ name: 'Webhook Subscription', value: 'webhookSubscription' },
 				],
 			},
 
@@ -393,58 +392,6 @@ export class Nuacom implements INodeType {
 				default: '',
 				required: true,
 				displayOptions: { show: { resource: ['sms'], operation: ['send'] } },
-			},
-
-			// ── Webhook Subscription ──────────────────────────────────────────────
-			{
-				displayName: 'Operation',
-				name: 'operation',
-				type: 'options',
-				noDataExpression: true,
-				displayOptions: { show: { resource: ['webhookSubscription'] } },
-				default: 'getAll',
-				options: [
-					{ name: 'Create', value: 'create', action: 'Create a subscription' },
-					{ name: 'Delete', value: 'delete', action: 'Delete a subscription' },
-					{ name: 'Get Many', value: 'getAll', action: 'List subscriptions' },
-				],
-			},
-			{
-				displayName: 'Event Type',
-				name: 'webhookType',
-				type: 'options',
-				required: true,
-				default: 'call_event',
-				displayOptions: { show: { resource: ['webhookSubscription'], operation: ['create'] } },
-				options: [
-					{ name: 'Call Answered', value: 'call_answered' },
-					{ name: 'Call Completed', value: 'call_event' },
-					{ name: 'Call Initiated', value: 'call_initiated' },
-					{ name: 'Call IVR Option Selected (Coming Soon)', value: 'ivr_option_selected' },
-					{ name: 'Call Missed', value: 'call_missed' },
-					{ name: 'Call Updated', value: 'call_updated' },
-					{ name: 'Incoming Call', value: 'inbound_call_event' },
-					{ name: 'Message Received', value: 'message_received' },
-					{ name: 'Message Sent', value: 'message_sent' },
-					{ name: 'Voicemail Received (Coming Soon)', value: 'voicemail_received' },
-				],
-			},
-			{
-				displayName: 'Webhook URL',
-				name: 'webhookUrl',
-				type: 'string',
-				required: true,
-				default: '',
-				placeholder: 'https://example.com/webhook',
-				displayOptions: { show: { resource: ['webhookSubscription'], operation: ['create'] } },
-			},
-			{
-				displayName: 'Subscription ID',
-				name: 'subscriptionId',
-				type: 'string',
-				required: true,
-				default: '',
-				displayOptions: { show: { resource: ['webhookSubscription'], operation: ['delete'] } },
 			},
 
 			// ── Message ──────────────────────────────────────────────────────────
@@ -822,40 +769,6 @@ export class Nuacom implements INodeType {
 						body,
 						json: true,
 					});
-				} else if (resource === 'webhookSubscription') {
-					if (operation === 'getAll') {
-						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
-							method: 'GET',
-							url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions`,
-							json: true,
-						});
-					} else if (operation === 'create') {
-						const webhookType = this.getNodeParameter('webhookType', i) as string;
-						const comingSoon = ['voicemail_received', 'ivr_option_selected'];
-						if (comingSoon.includes(webhookType)) {
-							throw new NodeOperationError(
-								this.getNode(),
-								`The "${webhookType}" event is not yet available. Coming soon.`,
-								{ itemIndex: i },
-							);
-						}
-						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
-							method: 'POST',
-							url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions`,
-							body: {
-								type: webhookType,
-								url: this.getNodeParameter('webhookUrl', i) as string,
-							},
-							json: true,
-						});
-					} else if (operation === 'delete') {
-						const subscriptionId = this.getNodeParameter('subscriptionId', i) as string;
-						responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
-							method: 'DELETE',
-							url: `${NUACOM_BASE_URL}/v2/webhook-subscriptions/${subscriptionId}`,
-							json: true,
-						});
-					}
 				} else if (resource === 'message') {
 					if (operation === 'sendWhatsapp') {
 						const metadata: { template_id: number; template_variables?: Record<string, string> } = {
