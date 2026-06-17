@@ -635,8 +635,8 @@ export class Nuacom implements INodeType {
 				type: 'string',
 				default: '',
 				required: true,
-				placeholder: 'YYYY-MM-DD',
-				description: 'Start of the period. The range may not exceed 31 days.',
+				placeholder: 'YYYY-MM-DD HH:MM:SS',
+				description: 'Start of the period, as a datetime (e.g. 2026-06-01 00:00:00). The range may not exceed 31 days.',
 				displayOptions: { show: { resource: ['nuacomAi'], operation: ['listCallsAiData'] } },
 			},
 			{
@@ -645,8 +645,8 @@ export class Nuacom implements INodeType {
 				type: 'string',
 				default: '',
 				required: true,
-				placeholder: 'YYYY-MM-DD',
-				description: 'End of the period. The range may not exceed 31 days.',
+				placeholder: 'YYYY-MM-DD HH:MM:SS',
+				description: 'End of the period, as a datetime (e.g. 2026-06-30 23:59:59). The range may not exceed 31 days.',
 				displayOptions: { show: { resource: ['nuacomAi'], operation: ['listCallsAiData'] } },
 			},
 			{
