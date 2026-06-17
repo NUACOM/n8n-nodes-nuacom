@@ -67,12 +67,13 @@ export class Nuacom implements INodeType {
 				displayOptions: { show: { resource: ['calls'] } },
 				default: 'getAll',
 				options: [
+					{ name: 'Add Note', value: 'addNote', action: 'Add a note to a call' },
+					{ name: 'Add Tag', value: 'addTag', action: 'Add a tag to a call' },
 					{ name: 'Dial a Team', value: 'dialTeam', action: 'Make a call to a queue' },
 					{ name: 'Dial an Agent', value: 'dialAgent', action: 'Make a call to an agent' },
 					{ name: 'Download Call Recording', value: 'downloadRecording', action: 'Download the recording of a completed call' },
 					{ name: 'Get', value: 'get', action: 'Retrieve a specific call by ID' },
 					{ name: 'Get Many', value: 'getAll', action: 'List and filter calls with pagination support' },
-					{ name: 'Update', value: 'update', action: 'Update call notes and tags' },
 				],
 			},
 			{
@@ -81,7 +82,7 @@ export class Nuacom implements INodeType {
 				type: 'string',
 				default: '',
 				required: true,
-				displayOptions: { show: { resource: ['calls'], operation: ['get', 'update', 'downloadRecording'] } },
+				displayOptions: { show: { resource: ['calls'], operation: ['get', 'addNote', 'addTag', 'downloadRecording'] } },
 			},
 			// Calls — Get Many filters
 			{
@@ -89,8 +90,8 @@ export class Nuacom implements INodeType {
 				name: 'callsDateFrom',
 				type: 'string',
 				default: '',
-				placeholder: 'YYYY-MM-DD',
-				description: 'Return calls on or after this date',
+				placeholder: 'YYYY-MM-DD or YYYY-MM-DD HH:MM:SS',
+				description: 'Return calls on or after this point. A bare date (YYYY-MM-DD) is treated as the start of that day; a full datetime is honored as-is.',
 				displayOptions: { show: { resource: ['calls'], operation: ['getAll'] } },
 			},
 			{
@@ -98,8 +99,8 @@ export class Nuacom implements INodeType {
 				name: 'callsDateTo',
 				type: 'string',
 				default: '',
-				placeholder: 'YYYY-MM-DD',
-				description: 'Return calls on or before this date',
+				placeholder: 'YYYY-MM-DD or YYYY-MM-DD HH:MM:SS',
+				description: 'Return calls on or before this point. A bare date (YYYY-MM-DD) is treated as the end of that day; a full datetime is honored as-is.',
 				displayOptions: { show: { resource: ['calls'], operation: ['getAll'] } },
 			},
 			{
@@ -155,24 +156,27 @@ export class Nuacom implements INodeType {
 				default: 25,
 				displayOptions: { show: { resource: ['calls'], operation: ['getAll'] } },
 			},
-			// Calls — Update (notes & tags)
+			// Calls — Add Note
 			{
 				displayName: 'Note',
 				name: 'callNote',
 				type: 'string',
 				typeOptions: { rows: 3 },
 				default: '',
-				description: 'Note text to add to the call. Leave empty to only add a tag.',
-				displayOptions: { show: { resource: ['calls'], operation: ['update'] } },
+				required: true,
+				description: 'Note text to add to the call',
+				displayOptions: { show: { resource: ['calls'], operation: ['addNote'] } },
 			},
+			// Calls — Add Tag
 			{
 				displayName: 'Tag Name or ID',
 				name: 'callTagId',
 				type: 'options',
 				default: '',
-				description: 'Tag to add to the call. Leave empty to only add a note. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				required: true,
+				description: 'Tag to add to the call. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 				typeOptions: { loadOptionsMethod: 'getCallTags' },
-				displayOptions: { show: { resource: ['calls'], operation: ['update'] } },
+				displayOptions: { show: { resource: ['calls'], operation: ['addTag'] } },
 			},
 			// Calls — Dial an Agent / Dial a Team
 			{
@@ -521,7 +525,8 @@ export class Nuacom implements INodeType {
 				name: 'adCallsDateFrom',
 				type: 'string',
 				default: '',
-				placeholder: 'YYYY-MM-DD',
+				placeholder: 'YYYY-MM-DD or YYYY-MM-DD HH:MM:SS',
+				description: 'A bare date is treated as the start of that day; a full datetime is honored as-is',
 				displayOptions: { show: { resource: ['autoDialer'], operation: ['getCalls'] } },
 			},
 			{
@@ -529,7 +534,8 @@ export class Nuacom implements INodeType {
 				name: 'adCallsDateTo',
 				type: 'string',
 				default: '',
-				placeholder: 'YYYY-MM-DD',
+				placeholder: 'YYYY-MM-DD or YYYY-MM-DD HH:MM:SS',
+				description: 'A bare date is treated as the end of that day; a full datetime is honored as-is',
 				displayOptions: { show: { resource: ['autoDialer'], operation: ['getCalls'] } },
 			},
 			{
@@ -814,38 +820,24 @@ async function handleCalls(this: IExecuteFunctions, operation: string, i: number
 		});
 	}
 
-	if (operation === 'update') {
+	if (operation === 'addNote') {
 		const callId = this.getNodeParameter('callId', i) as string;
-		const note = getTrimmedParam(this, 'callNote', i);
-		const tagId = this.getNodeParameter('callTagId', i, '') as number | string;
+		return this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
+			method: 'POST',
+			url: `${NUACOM_BASE_URL}/v2/call-notes`,
+			body: { callId, note: this.getNodeParameter('callNote', i) as string },
+			json: true,
+		});
+	}
 
-		if (note === '' && (tagId === '' || tagId === null || tagId === undefined)) {
-			throw new NodeOperationError(this.getNode(), 'Provide a note, a tag, or both to update the call', {
-				itemIndex: i,
-			});
-		}
-
-		const result: IDataObject = { call_id: callId };
-
-		if (note !== '') {
-			result.note = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
-				method: 'POST',
-				url: `${NUACOM_BASE_URL}/v2/call-notes`,
-				body: { callId, note },
-				json: true,
-			});
-		}
-
-		if (tagId !== '' && tagId !== null && tagId !== undefined) {
-			result.tag = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
-				method: 'POST',
-				url: `${NUACOM_BASE_URL}/v2/add-call-tag`,
-				body: { call_id: callId, tag_info_id: Number(tagId) },
-				json: true,
-			});
-		}
-
-		return result;
+	if (operation === 'addTag') {
+		const callId = this.getNodeParameter('callId', i) as string;
+		return this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
+			method: 'POST',
+			url: `${NUACOM_BASE_URL}/v2/add-call-tag`,
+			body: { call_id: callId, tag_info_id: Number(this.getNodeParameter('callTagId', i)) },
+			json: true,
+		});
 	}
 
 	if (operation === 'dialAgent' || operation === 'dialTeam') {
