@@ -24,6 +24,51 @@ function getTrimmedParam(ctx: IWebhookFunctions, name: string): string {
 	return value === null || value === undefined ? '' : String(value).trim();
 }
 
+/**
+ * Parse the extension out of a NUACOM channel string.
+ *
+ * Mirrors the backend's CallEventHookHelper::getExtensionFromChannel: the
+ * channel is hyphen-delimited (e.g. "svrX-coreY-36-00000abc") and the third
+ * segment is the extension, accepted only when it is a 2–4 digit value.
+ */
+function extensionFromChannel(channel: string): string {
+	const segment = channel.split('-')[2] ?? '';
+
+	if (segment !== '' && segment !== '0' && segment.length >= 2 && segment.length <= 4) {
+		return segment;
+	}
+
+	return '';
+}
+
+/**
+ * Collect every extension that can identify the agent on a call event.
+ *
+ * The backend does not expose a single canonical field: inbound answered calls
+ * carry the agent in `call_answered_by`, some events use `call_initiated_by`,
+ * and outbound calls only expose the extension inside `call_channel_local`
+ * (which is why the backend's CallEventHookHelper parses the channel for
+ * outbound). Matching only `call_answered_by`/`call_initiated_by` silently drops
+ * events for an extension on outbound calls, so gather all candidates here.
+ */
+function collectCallExtensions(body: Record<string, unknown>): Set<string> {
+	const candidates = new Set<string>();
+
+	for (const value of [body.call_answered_by, body.call_initiated_by]) {
+		const extension = String(value ?? '').trim();
+		if (extension !== '' && extension !== '0') {
+			candidates.add(extension);
+		}
+	}
+
+	const channelExtension = extensionFromChannel(String(body.call_channel_local ?? ''));
+	if (channelExtension !== '') {
+		candidates.add(channelExtension);
+	}
+
+	return candidates;
+}
+
 const EVENT_TYPES = [
 	{ name: 'Call Answered', value: 'call_answered' },
 	{ name: 'Call Completed', value: 'call_event' },
@@ -310,9 +355,8 @@ export class NuacomTrigger implements INodeType {
 				}
 			}
 			if (extension) {
-				const answeredBy = String(bodyData.call_answered_by ?? '');
-				const initiatedBy = String(bodyData.call_initiated_by ?? '');
-				if (answeredBy !== extension && initiatedBy !== extension) {
+				const candidates = collectCallExtensions(bodyData);
+				if (!candidates.has(extension)) {
 					return {};
 				}
 			}

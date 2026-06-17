@@ -393,6 +393,15 @@ export class Nuacom implements INodeType {
 				required: true,
 				displayOptions: { show: { resource: ['sms'], operation: ['send'] } },
 			},
+			{
+				displayName: 'Template Name or ID',
+				name: 'smsTemplate',
+				type: 'options',
+				default: '',
+				description: 'Approved 10DLC campaign template. Required to deliver to USA numbers — US carriers reject A2P SMS without an approved 10DLC campaign (toll-free senders are exempt). Leave as "None" for non-US destinations. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				typeOptions: { loadOptionsMethod: 'getSmsTemplates' },
+				displayOptions: { show: { resource: ['sms'], operation: ['send'] } },
+			},
 
 			// ── Message ──────────────────────────────────────────────────────────
 			{
@@ -564,6 +573,20 @@ export class Nuacom implements INodeType {
 					name: t.language ? `${t.name} (${t.language})` : t.name,
 					value: t.id,
 				}));
+			},
+
+			async getSmsTemplates(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
+					method: 'GET',
+					url: `${NUACOM_BASE_URL}/v2/sms/templates`,
+					qs: { per_page: 100 },
+					json: true,
+				});
+				const templates = (response as { data?: Array<{ template_id: number; name: string }> }).data ?? [];
+				return [
+					{ name: 'None', value: '' },
+					...templates.map((t) => ({ name: t.name, value: t.template_id })),
+				];
 			},
 
 			async getWhatsappSenders(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
@@ -758,11 +781,23 @@ export class Nuacom implements INodeType {
 						json: true,
 					});
 				} else if (resource === 'sms') {
-					const body = {
+					const body: {
+						from: string;
+						to: Array<{ number: string }>;
+						message: string;
+						template_id?: number;
+					} = {
 						from: this.getNodeParameter('smsFrom', i) as string,
 						to: [{ number: this.getNodeParameter('smsTo', i) as string }],
 						message: this.getNodeParameter('smsMessage', i) as string,
 					};
+
+					// Approved 10DLC campaign template — required for USA recipients.
+					const smsTemplate = this.getNodeParameter('smsTemplate', i, '');
+					if (smsTemplate !== '' && smsTemplate !== null && smsTemplate !== undefined) {
+						body.template_id = Number(smsTemplate);
+					}
+
 					responseData = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 						method: 'POST',
 						url: `${NUACOM_BASE_URL}/v2/sms/send`,
