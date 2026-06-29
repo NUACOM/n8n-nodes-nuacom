@@ -226,13 +226,13 @@ export class Nuacom implements INodeType {
 			},
 			// Messages — Send (SMS)
 			{
-				displayName: 'From',
+				displayName: 'From Name or ID',
 				name: 'smsFrom',
-				type: 'string',
+				type: 'options',
 				default: '',
 				required: true,
-				placeholder: 'NUACOM',
-				description: 'Sender name or number (must be registered on your account)',
+				description: 'Sender name or number to send from (must be an approved sender on your account). Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				typeOptions: { loadOptionsMethod: 'getSmsSenders' },
 				displayOptions: { show: { resource: ['messages'], operation: ['send'] } },
 			},
 			{
@@ -712,6 +712,23 @@ export class Nuacom implements INodeType {
 					{ name: 'None', value: '' },
 					...templates.map((t) => ({ name: t.name, value: t.template_id })),
 				];
+			},
+
+			async getSmsSenders(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				// Returns the account's approved SMS sender names/numbers — the
+				// same set the send endpoint validates `from` against. Endpoint
+				// responds with a plain array, not a paginated wrapper.
+				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
+					method: 'GET',
+					url: `${NUACOM_BASE_URL}/v2/sms/sender_names`,
+					qs: { 'filter[channel]': 'sms' },
+					json: true,
+				});
+				const senders = (Array.isArray(response) ? response : []) as Array<{ sender_name: string; is_default?: boolean }>;
+				return senders.map((s) => ({
+					name: s.is_default ? `${s.sender_name} (default)` : s.sender_name,
+					value: s.sender_name,
+				}));
 			},
 
 			async getWhatsappSenders(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
