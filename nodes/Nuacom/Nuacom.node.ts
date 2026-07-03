@@ -24,6 +24,36 @@ function getTrimmedParam(ctx: IExecuteFunctions, name: string, index: number): s
 	return value === null || value === undefined ? '' : String(value).trim();
 }
 
+/**
+ * Fetch every page of a Laravel-paginated collection (data + meta.last_page),
+ * so dropdowns list all records instead of silently stopping at the first
+ * page. Capped at 20 pages (2,000 records at per_page=100) as a runaway guard
+ * in case the API ever stops reporting last_page.
+ */
+async function fetchAllPages<T>(
+	ctx: ILoadOptionsFunctions,
+	url: string,
+	qs: IDataObject,
+): Promise<T[]> {
+	const items: T[] = [];
+	const maxPages = 20;
+	let lastPage = 1;
+
+	for (let page = 1; page <= Math.min(lastPage, maxPages); page++) {
+		const response = (await ctx.helpers.httpRequestWithAuthentication.call(ctx, 'nuacomApi', {
+			method: 'GET',
+			url,
+			qs: { ...qs, page },
+			json: true,
+		})) as { data?: T[]; meta?: { last_page?: number } };
+
+		items.push(...(response.data ?? []));
+		lastPage = response.meta?.last_page ?? 1;
+	}
+
+	return items;
+}
+
 export class Nuacom implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'NUACOM',
@@ -245,15 +275,6 @@ export class Nuacom implements INodeType {
 				displayOptions: { show: { resource: ['messages'], operation: ['send'] } },
 			},
 			{
-				displayName: 'Message',
-				name: 'smsMessage',
-				type: 'string',
-				typeOptions: { rows: 4 },
-				default: '',
-				required: true,
-				displayOptions: { show: { resource: ['messages'], operation: ['send'] } },
-			},
-			{
 				displayName: 'Template Name or ID',
 				name: 'smsTemplate',
 				type: 'options',
@@ -261,6 +282,32 @@ export class Nuacom implements INodeType {
 				description: 'Approved 10DLC campaign template. Required to deliver to USA numbers — US carriers reject A2P SMS without an approved 10DLC campaign (toll-free senders are exempt). Leave as "None" for non-US destinations. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 				typeOptions: { loadOptionsMethod: 'getSmsTemplates' },
 				displayOptions: { show: { resource: ['messages'], operation: ['send'] } },
+			},
+			// The Message field appears as required until a template is selected,
+			// then as optional (empty → the template's text is sent). n8n cannot
+			// toggle `required` on one field, so two variants are shown/hidden on
+			// the smsTemplate value; the execute path picks whichever is active.
+			{
+				displayName: 'Message',
+				name: 'smsMessage',
+				type: 'string',
+				typeOptions: { rows: 4 },
+				default: '',
+				required: true,
+				description: 'The text that is sent',
+				displayOptions: { show: { resource: ['messages'], operation: ['send'], smsTemplate: [''] } },
+			},
+			{
+				displayName: 'Message',
+				name: 'smsMessageWithTemplate',
+				type: 'string',
+				typeOptions: { rows: 4 },
+				default: '',
+				description: "Leave empty to send the selected template's text",
+				displayOptions: {
+					show: { resource: ['messages'], operation: ['send'] },
+					hide: { smsTemplate: [''] },
+				},
 			},
 			// Messages — Send WhatsApp
 			{
@@ -687,13 +734,11 @@ export class Nuacom implements INodeType {
 
 			async getWhatsappTemplates(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				// status=1 → only Approved templates; WhatsApp rejects sending non-approved ones
-				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
-					method: 'GET',
-					url: `${NUACOM_BASE_URL}/v2/integrations/whatsapp/templates`,
-					qs: { status: 1, per_page: 100 },
-					json: true,
-				});
-				const templates = (response as { data?: Array<{ id: number; name: string; language?: string }> }).data ?? [];
+				const templates = await fetchAllPages<{ id: number; name: string; language?: string }>(
+					this,
+					`${NUACOM_BASE_URL}/v2/integrations/whatsapp/templates`,
+					{ status: 1, per_page: 100 },
+				);
 				return templates.map((t) => ({
 					name: t.language ? `${t.name} (${t.language})` : t.name,
 					value: t.id,
@@ -701,16 +746,17 @@ export class Nuacom implements INodeType {
 			},
 
 			async getSmsTemplates(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
-				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
-					method: 'GET',
-					url: `${NUACOM_BASE_URL}/v2/sms/templates`,
-					qs: { per_page: 100 },
-					json: true,
-				});
-				const templates = (response as { data?: Array<{ template_id: number; name: string }> }).data ?? [];
+				// Same endpoint the web portal uses. Its filters default to
+				// channel=SMS and status=Approved, so WhatsApp and unapproved
+				// templates are excluded without extra parameters.
+				const templates = await fetchAllPages<{ id: number; name: string }>(
+					this,
+					`${NUACOM_BASE_URL}/v2/sms-templates`,
+					{ sort: 'name', per_page: 100 },
+				);
 				return [
 					{ name: 'None', value: '' },
-					...templates.map((t) => ({ name: t.name, value: t.template_id })),
+					...templates.map((t) => ({ name: t.name, value: t.id })),
 				];
 			},
 
@@ -880,15 +926,55 @@ async function handleCalls(this: IExecuteFunctions, operation: string, i: number
 
 async function handleMessages(this: IExecuteFunctions, operation: string, i: number): Promise<unknown> {
 	if (operation === 'send') {
+		// Approved 10DLC campaign template — required for USA recipients.
+		const smsTemplate = this.getNodeParameter('smsTemplate', i, '');
+		const templateId =
+			smsTemplate === '' || smsTemplate === null || smsTemplate === undefined
+				? null
+				: Number(smsTemplate);
+
+		// Two Message field variants exist: required (no template) and optional
+		// (template selected, empty → send the template's text).
+		let message =
+			templateId === null
+				? getTrimmedParam(this, 'smsMessage', i)
+				: getTrimmedParam(this, 'smsMessageWithTemplate', i);
+
+		if (templateId !== null && message === '') {
+			const template = (await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
+				method: 'GET',
+				url: `${NUACOM_BASE_URL}/v2/sms-templates/${templateId}`,
+				json: true,
+			})) as { message_text?: string; data?: { message_text?: string } };
+			message = String(template.message_text ?? template.data?.message_text ?? '').trim();
+
+			if (message === '') {
+				throw new NodeOperationError(
+					this.getNode(),
+					'The selected template has no text — enter a message.',
+					{ itemIndex: i },
+				);
+			}
+			if (/\{\{[^}]*\}\}/.test(message)) {
+				throw new NodeOperationError(
+					this.getNode(),
+					'The selected template contains placeholders (e.g. {{name}}), so its text cannot be sent as-is — enter the message with the placeholders filled in.',
+					{ itemIndex: i },
+				);
+			}
+		}
+
+		if (message === '') {
+			throw new NodeOperationError(this.getNode(), 'Message is required.', { itemIndex: i });
+		}
+
 		const body: { from: string; to: Array<{ number: string }>; message: string; template_id?: number } = {
 			from: this.getNodeParameter('smsFrom', i) as string,
 			to: [{ number: this.getNodeParameter('smsTo', i) as string }],
-			message: this.getNodeParameter('smsMessage', i) as string,
+			message,
 		};
-		// Approved 10DLC campaign template — required for USA recipients.
-		const smsTemplate = this.getNodeParameter('smsTemplate', i, '');
-		if (smsTemplate !== '' && smsTemplate !== null && smsTemplate !== undefined) {
-			body.template_id = Number(smsTemplate);
+		if (templateId !== null) {
+			body.template_id = templateId;
 		}
 		return this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 			method: 'POST',
