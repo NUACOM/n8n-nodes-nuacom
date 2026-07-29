@@ -43,7 +43,9 @@ A comprehensive node for interacting with the NUACOM API, supporting the followi
 - **Get Many** — List all extensions on the account
 
 #### 💬 **Message**
-- **Send WhatsApp** — Send a WhatsApp message to a phone number
+- **Send WhatsApp Message** — Send a free-form WhatsApp message (text, media, location) within the 24-hour Customer Service Window
+- **Send WhatsApp Template** — Send an approved WhatsApp template to a phone number
+- **Add or Update a Conversation Assignee** — Assign a conversation to a user or group (or unassign it), e.g. to hand over from AI to a human
 - **Get** — Retrieve a message by ID
 - **Get Conversation** — Retrieve a conversation by ID
 

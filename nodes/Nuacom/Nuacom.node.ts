@@ -247,11 +247,13 @@ export class Nuacom implements INodeType {
 				displayOptions: { show: { resource: ['messages'] } },
 				default: 'send',
 				options: [
+					{ name: 'Add or Update a Conversation Assignee', value: 'assignConversation', action: 'Add or update a conversation assignee' },
 					{ name: 'Get', value: 'get', action: 'Retrieve a specific SMS by ID' },
 					{ name: 'Get Conversation', value: 'getConversation', action: 'Retrieve all messages from a customer conversation' },
 					{ name: 'Get Many', value: 'getAll', action: 'List and filter messages' },
 					{ name: 'Send', value: 'send', action: 'Send an SMS message' },
-					{ name: 'Send WhatsApp Message', value: 'sendWhatsapp', action: 'Send a whats app message' },
+					{ name: 'Send WhatsApp Message', value: 'sendWhatsappMessage', action: 'Send a whats app free form message' },
+					{ name: 'Send WhatsApp Template', value: 'sendWhatsapp', action: 'Send a whats app template message' },
 				],
 			},
 			// Messages — Send (SMS)
@@ -309,7 +311,7 @@ export class Nuacom implements INodeType {
 					hide: { smsTemplate: [''] },
 				},
 			},
-			// Messages — Send WhatsApp
+			// Messages — Send WhatsApp (shared between template and free-form)
 			{
 				displayName: 'To',
 				name: 'messageTo',
@@ -318,7 +320,7 @@ export class Nuacom implements INodeType {
 				required: true,
 				placeholder: '+353871234567',
 				description: 'Recipient phone number',
-				displayOptions: { show: { resource: ['messages'], operation: ['sendWhatsapp'] } },
+				displayOptions: { show: { resource: ['messages'], operation: ['sendWhatsapp', 'sendWhatsappMessage'] } },
 			},
 			{
 				displayName: 'Sender Name or ID',
@@ -328,15 +330,16 @@ export class Nuacom implements INodeType {
 				required: true,
 				description: 'WhatsApp sender number to send from. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 				typeOptions: { loadOptionsMethod: 'getWhatsappSenders' },
-				displayOptions: { show: { resource: ['messages'], operation: ['sendWhatsapp'] } },
+				displayOptions: { show: { resource: ['messages'], operation: ['sendWhatsapp', 'sendWhatsappMessage'] } },
 			},
+			// Messages — Send WhatsApp Template
 			{
 				displayName: 'Template Name or ID',
 				name: 'whatsappTemplate',
 				type: 'options',
 				default: '',
 				required: true,
-				description: 'Approved WhatsApp template to send. WhatsApp does not allow free-form messages. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				description: 'Approved WhatsApp template to send. Templates are required outside the 24-hour Customer Service Window. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
 				typeOptions: { loadOptionsMethod: 'getWhatsappTemplates' },
 				displayOptions: { show: { resource: ['messages'], operation: ['sendWhatsapp'] } },
 			},
@@ -371,6 +374,96 @@ export class Nuacom implements INodeType {
 						],
 					},
 				],
+			},
+			// Messages — Send WhatsApp Message (free-form)
+			{
+				displayName: 'Message',
+				name: 'whatsappMessageText',
+				type: 'string',
+				typeOptions: { rows: 4 },
+				default: '',
+				required: true,
+				description: "Free-form text to send. WhatsApp only delivers free-form messages while the 24-hour Customer Service Window is open (the customer wrote within the last 24 hours) — outside it, use the Send WhatsApp Template operation.",
+				displayOptions: { show: { resource: ['messages'], operation: ['sendWhatsappMessage'] } },
+			},
+			{
+				displayName: 'Options',
+				name: 'whatsappMessageOptions',
+				type: 'collection',
+				placeholder: 'Add option',
+				default: {},
+				displayOptions: { show: { resource: ['messages'], operation: ['sendWhatsappMessage'] } },
+				options: [
+					{
+						displayName: 'Location Label',
+						name: 'locationLabel',
+						type: 'string',
+						default: '',
+						description: 'Optional name shown on the location pin (e.g. the venue name)',
+					},
+					{
+						displayName: 'Location Latitude',
+						name: 'locationLatitude',
+						type: 'number',
+						default: 0,
+						typeOptions: { numberPrecision: 7, minValue: -90, maxValue: 90 },
+						description: 'Latitude of a location pin to attach. Requires Location Longitude as well.',
+					},
+					{
+						displayName: 'Location Longitude',
+						name: 'locationLongitude',
+						type: 'number',
+						default: 0,
+						typeOptions: { numberPrecision: 7, minValue: -180, maxValue: 180 },
+						description: 'Longitude of a location pin to attach. Requires Location Latitude as well.',
+					},
+					{
+						displayName: 'Media URL',
+						name: 'mediaUrl',
+						type: 'string',
+						default: '',
+						description: 'Public URL of an image, video, audio file or document to attach (jpeg, png, mp4, mp3, pdf, docx, …)',
+					},
+				],
+			},
+			// Messages — Add or Update a Conversation Assignee
+			{
+				displayName: 'ID Type',
+				name: 'assignIdType',
+				type: 'options',
+				options: [
+					{ name: 'Conversation ID', value: 'conversation' },
+					{ name: 'Message ID', value: 'message' },
+				],
+				default: 'conversation',
+				description: "Whether the ID below is a conversation ID or a message ID (the message's conversation is resolved automatically)",
+				displayOptions: { show: { resource: ['messages'], operation: ['assignConversation'] } },
+			},
+			{
+				displayName: 'Conversation ID',
+				name: 'assignConversationId',
+				type: 'string',
+				default: '',
+				required: true,
+				displayOptions: { show: { resource: ['messages'], operation: ['assignConversation'], assignIdType: ['conversation'] } },
+			},
+			{
+				displayName: 'Message ID',
+				name: 'assignMessageId',
+				type: 'string',
+				default: '',
+				required: true,
+				displayOptions: { show: { resource: ['messages'], operation: ['assignConversation'], assignIdType: ['message'] } },
+			},
+			{
+				displayName: 'Assignee Name or ID',
+				name: 'conversationAssignee',
+				type: 'options',
+				default: '',
+				required: true,
+				description: 'User or group to assign the conversation to — handy to hand a conversation over to a human. Requires an account-admin API token. As an expression, use the form user:123, group:5 or unassign. Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				typeOptions: { loadOptionsMethod: 'getConversationAssignees' },
+				displayOptions: { show: { resource: ['messages'], operation: ['assignConversation'] } },
 			},
 			// Messages — Get
 			{
@@ -777,6 +870,32 @@ export class Nuacom implements INodeType {
 				}));
 			},
 
+			async getConversationAssignees(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
+				// Groups are departments on the API side. Both endpoints return the
+				// full set in one response (no pagination).
+				const [usersResponse, departmentsResponse] = await Promise.all([
+					this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
+						method: 'GET',
+						url: `${NUACOM_BASE_URL}/v2/users_list`,
+						json: true,
+					}),
+					this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
+						method: 'GET',
+						url: `${NUACOM_BASE_URL}/v2/departments`,
+						json: true,
+					}),
+				]);
+				const users = (Array.isArray(usersResponse) ? usersResponse : []) as Array<{ user_id: string; user_name: string }>;
+				const rawDepartments = (departmentsResponse as { data?: unknown }).data ?? departmentsResponse;
+				const departments = (Array.isArray(rawDepartments) ? rawDepartments : []) as Array<{ id: number; name: string }>;
+				const byName = (a: INodePropertyOptions, b: INodePropertyOptions) => a.name.localeCompare(b.name);
+				return [
+					{ name: 'Unassign', value: 'unassign' },
+					...departments.map((d) => ({ name: `Group: ${d.name}`, value: `group:${d.id}` })).sort(byName),
+					...users.map((u) => ({ name: `User: ${u.user_name}`, value: `user:${u.user_id}` })).sort(byName),
+				];
+			},
+
 			async getWhatsappSenders(this: ILoadOptionsFunctions): Promise<INodePropertyOptions[]> {
 				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 					method: 'GET',
@@ -1017,6 +1136,119 @@ async function handleMessages(this: IExecuteFunctions, operation: string, i: num
 				],
 				message: { metadata },
 			},
+			json: true,
+		});
+	}
+
+	if (operation === 'sendWhatsappMessage') {
+		const options = this.getNodeParameter('whatsappMessageOptions', i, {}) as {
+			mediaUrl?: string;
+			locationLatitude?: number;
+			locationLongitude?: number;
+			locationLabel?: string;
+		};
+		const message: IDataObject = {
+			content: this.getNodeParameter('whatsappMessageText', i) as string,
+		};
+		const mediaUrl = String(options.mediaUrl ?? '').trim();
+		if (mediaUrl !== '') {
+			message.content_url = mediaUrl;
+		}
+		const hasLatitude = options.locationLatitude !== undefined;
+		const hasLongitude = options.locationLongitude !== undefined;
+		if (hasLatitude !== hasLongitude) {
+			throw new NodeOperationError(
+				this.getNode(),
+				'A location needs both Location Latitude and Location Longitude.',
+				{ itemIndex: i },
+			);
+		}
+		if (hasLatitude && hasLongitude) {
+			const location: IDataObject = {
+				latitude: options.locationLatitude,
+				longitude: options.locationLongitude,
+			};
+			const label = String(options.locationLabel ?? '').trim();
+			if (label !== '') {
+				location.label = label;
+			}
+			message.metadata = { location };
+		}
+		try {
+			return await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
+				method: 'POST',
+				url: `${NUACOM_BASE_URL}/v2/conversations`,
+				body: {
+					channel_type: 2, // WhatsApp
+					sender_id: this.getNodeParameter('whatsappSender', i) as string,
+					participants: [
+						{
+							participant_type: 'phone_number',
+							participant_id: getTrimmedParam(this, 'messageTo', i),
+						},
+					],
+					message,
+				},
+				json: true,
+			});
+		} catch (error) {
+			// The API rejects free-form messages outside WhatsApp's 24-hour
+			// Customer Service Window — surface that as a clear, actionable error.
+			const errorBody = (error as { response?: { body?: unknown } }).response?.body ?? error;
+			if (JSON.stringify(errorBody ?? '').includes('WHATSAPP_CSW_CLOSED')) {
+				throw new NodeOperationError(
+					this.getNode(),
+					"The 24-hour Customer Service Window is closed for this recipient — WhatsApp only accepts free-form messages within 24 hours of the customer's last message. Use the Send WhatsApp Template operation instead.",
+					{ itemIndex: i },
+				);
+			}
+			throw new NodeApiError(this.getNode(), error as JsonObject, { itemIndex: i });
+		}
+	}
+
+	if (operation === 'assignConversation') {
+		const idType = this.getNodeParameter('assignIdType', i) as string;
+		let conversationId: string;
+		if (idType === 'message') {
+			const assignMessageId = getTrimmedParam(this, 'assignMessageId', i);
+			const info = (await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
+				method: 'GET',
+				url: `${NUACOM_BASE_URL}/v2/conversations/messages/${assignMessageId}`,
+				json: true,
+			})) as { conversation_id?: number | string; data?: { conversation_id?: number | string } };
+			const resolved = info.conversation_id ?? info.data?.conversation_id;
+			if (resolved === undefined || resolved === null || String(resolved) === '') {
+				throw new NodeOperationError(
+					this.getNode(),
+					`Could not resolve the conversation for message ${assignMessageId}.`,
+					{ itemIndex: i },
+				);
+			}
+			conversationId = String(resolved);
+		} else {
+			conversationId = getTrimmedParam(this, 'assignConversationId', i);
+		}
+
+		const assignee = getTrimmedParam(this, 'conversationAssignee', i);
+		const body: { user_id: number | null; department_id: number | null } = {
+			user_id: null,
+			department_id: null,
+		};
+		if (assignee.startsWith('user:')) {
+			body.user_id = Number(assignee.slice('user:'.length));
+		} else if (assignee.startsWith('group:')) {
+			body.department_id = Number(assignee.slice('group:'.length));
+		} else if (assignee !== 'unassign') {
+			throw new NodeOperationError(
+				this.getNode(),
+				`Unrecognized assignee "${assignee}" — use user:<ID>, group:<ID> or unassign.`,
+				{ itemIndex: i },
+			);
+		}
+		return this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
+			method: 'PATCH',
+			url: `${NUACOM_BASE_URL}/v2/conversations/${conversationId}/assign`,
+			body,
 			json: true,
 		});
 	}
