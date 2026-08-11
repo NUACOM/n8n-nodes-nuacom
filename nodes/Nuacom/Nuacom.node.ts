@@ -382,8 +382,7 @@ export class Nuacom implements INodeType {
 				type: 'string',
 				typeOptions: { rows: 4 },
 				default: '',
-				required: true,
-				description: "Free-form text to send. WhatsApp only delivers free-form messages while the 24-hour Customer Service Window is open (the customer wrote within the last 24 hours) — outside it, use the Send WhatsApp Template operation.",
+				description: "Free-form text to send. Required unless a Media URL option is set — leave empty to send the media without a caption. WhatsApp only delivers free-form messages while the 24-hour Customer Service Window is open (the customer wrote within the last 24 hours) — outside it, use the Send WhatsApp Template operation.",
 				displayOptions: { show: { resource: ['messages'], operation: ['sendWhatsappMessage'] } },
 			},
 			{
@@ -1147,10 +1146,19 @@ async function handleMessages(this: IExecuteFunctions, operation: string, i: num
 			locationLongitude?: number;
 			locationLabel?: string;
 		};
-		const message: IDataObject = {
-			content: this.getNodeParameter('whatsappMessageText', i) as string,
-		};
+		const content = getTrimmedParam(this, 'whatsappMessageText', i);
 		const mediaUrl = String(options.mediaUrl ?? '').trim();
+		if (content === '' && mediaUrl === '') {
+			throw new NodeOperationError(
+				this.getNode(),
+				'Enter a Message, set a Media URL option, or both.',
+				{ itemIndex: i },
+			);
+		}
+		const message: IDataObject = {};
+		if (content !== '') {
+			message.content = content;
+		}
 		if (mediaUrl !== '') {
 			message.content_url = mediaUrl;
 		}
