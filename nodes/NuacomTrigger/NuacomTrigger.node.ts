@@ -92,7 +92,7 @@ export class NuacomTrigger implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'NUACOM Trigger',
 		name: 'nuacomTrigger',
-		icon: 'file:nuacom.svg',
+		icon: { light: 'file:nuacom.svg', dark: 'file:nuacom.dark.svg' },
 		group: ['trigger'],
 		version: 1,
 		description: 'Triggers a workflow when a NUACOM event occurs',
@@ -227,7 +227,6 @@ export class NuacomTrigger implements INodeType {
 				displayOptions: { show: { event: MESSAGE_EVENTS } },
 			},
 		],
-		usableAsTool: true,
 	};
 
 	methods = {

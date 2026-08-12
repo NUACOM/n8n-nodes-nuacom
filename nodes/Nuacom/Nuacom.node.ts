@@ -58,7 +58,7 @@ export class Nuacom implements INodeType {
 	description: INodeTypeDescription = {
 		displayName: 'NUACOM',
 		name: 'nuacom',
-		icon: 'file:nuacom.svg',
+		icon: { light: 'file:nuacom.svg', dark: 'file:nuacom.dark.svg' },
 		group: ['transform'],
 		version: 1,
 		description: 'Interact with the NUACOM public API',
