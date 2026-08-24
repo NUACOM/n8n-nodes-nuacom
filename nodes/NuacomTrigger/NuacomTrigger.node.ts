@@ -72,14 +72,14 @@ function collectCallExtensions(body: Record<string, unknown>): Set<string> {
 const EVENT_TYPES = [
 	{ name: 'Call Answered', value: 'call_answered' },
 	{ name: 'Call Completed', value: 'call_event' },
-	{ name: 'Call IVR Option Selected (Coming Soon)', value: 'ivr_option_selected' },
+	{ name: 'Call IVR Option Selected', value: 'ivr_option_selected' },
 	{ name: 'Call Initiated', value: 'call_initiated' },
 	{ name: 'Call Missed', value: 'call_missed' },
 	{ name: 'Call Updated', value: 'call_updated' },
 	{ name: 'Incoming Call', value: 'inbound_call_event' },
 	{ name: 'Message Received', value: 'message_received' },
 	{ name: 'Message Sent', value: 'message_sent' },
-	{ name: 'Voicemail Received (Coming Soon)', value: 'voicemail_received' },
+	{ name: 'Voicemail Received', value: 'voicemail_received' },
 ];
 
 const CALL_EVENTS_WITH_DIRECTION_FILTER = ['call_answered', 'call_completed', 'call_event', 'call_initiated', 'call_missed'];
@@ -185,22 +185,22 @@ export class NuacomTrigger implements INodeType {
 			},
 			// IVR filter
 			{
-				displayName: 'IVR',
+				displayName: 'IVR ID',
 				name: 'ivr',
 				type: 'string',
 				default: '',
-				placeholder: 'e.g. Main Menu',
-				description: 'Only trigger for a specific IVR. Leave empty for all IVRs.',
+				placeholder: 'e.g. 42',
+				description: 'Only trigger for the IVR with this ID (the webhook\'s ivr_id field). Leave empty for all IVRs. Filters combine: the event must match every filter set.',
 				displayOptions: { show: { event: ['ivr_option_selected'] } },
 			},
 			// Voicemail filter
 			{
-				displayName: 'Voicemail Box',
+				displayName: 'Voicemail Box Name or ID',
 				name: 'voicemailBox',
-				type: 'string',
+				type: 'options',
 				default: '',
-				placeholder: 'e.g. Sales',
-				description: 'Only trigger for a specific voicemail box. Leave empty for all boxes.',
+				description: 'Only trigger for this voicemail box (mailboxes are extensions). Choose from the list, or specify an ID using an <a href="https://docs.n8n.io/code/expressions/">expression</a>.',
+				typeOptions: { loadOptionsMethod: 'getExtensions' },
 				displayOptions: { show: { event: ['voicemail_received'] } },
 			},
 			// Message filters
@@ -282,14 +282,6 @@ export class NuacomTrigger implements INodeType {
 			async create(this: IHookFunctions): Promise<boolean> {
 				const webhookUrl = this.getNodeWebhookUrl('default');
 				const event = this.getNodeParameter('event') as string;
-
-				const comingSoon = ['voicemail_received', 'ivr_option_selected'];
-				if (comingSoon.includes(event)) {
-					throw new NodeOperationError(
-						this.getNode(),
-						`The "${event}" event is not yet available. Coming soon.`,
-					);
-				}
 
 				const response = await this.helpers.httpRequestWithAuthentication.call(this, 'nuacomApi', {
 					method: 'POST',
@@ -376,6 +368,20 @@ export class NuacomTrigger implements INodeType {
 				return {};
 			}
 			if (updateType && bodyData.update_type !== updateType) {
+				return {};
+			}
+		}
+
+		if (event === 'ivr_option_selected') {
+			const ivr = getTrimmedParam(this, 'ivr');
+			if (ivr && String(bodyData.ivr_id ?? '') !== ivr) {
+				return {};
+			}
+		}
+
+		if (event === 'voicemail_received') {
+			const voicemailBox = getTrimmedParam(this, 'voicemailBox');
+			if (voicemailBox && String(bodyData.extension ?? '') !== voicemailBox) {
 				return {};
 			}
 		}
