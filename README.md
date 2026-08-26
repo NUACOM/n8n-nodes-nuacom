@@ -73,8 +73,8 @@ A webhook trigger node that automatically starts workflows when NUACOM events oc
 | **Incoming Call** | Queue, Extension |
 | **Message Received** | Channel (SMS / WhatsApp), Message Contains |
 | **Message Sent** | Channel (SMS / WhatsApp), Message Contains |
-| **Call IVR Option Selected** | *(coming soon)* |
-| **Voicemail Received** | *(coming soon)* |
+| **Call IVR Option Selected** | IVR ID |
+| **Voicemail Received** | Voicemail Box (extension) |
 
 ---
 

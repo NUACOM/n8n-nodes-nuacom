@@ -25,6 +25,16 @@ function getTrimmedParam(ctx: IWebhookFunctions, name: string): string {
 }
 
 /**
+ * Normalise a webhook payload identifier for comparison against a filter.
+ *
+ * Ids reach us as either JSON strings or numbers depending on the emitting
+ * service, so compare them as trimmed strings rather than by identity.
+ */
+function normaliseId(value: unknown): string {
+	return value === null || value === undefined ? '' : String(value).trim();
+}
+
+/**
  * Parse the extension out of a NUACOM channel string.
  *
  * Mirrors the backend's CallEventHookHelper::getExtensionFromChannel: the
@@ -374,14 +384,14 @@ export class NuacomTrigger implements INodeType {
 
 		if (event === 'ivr_option_selected') {
 			const ivr = getTrimmedParam(this, 'ivr');
-			if (ivr && String(bodyData.ivr_id ?? '') !== ivr) {
+			if (ivr && normaliseId(bodyData.ivr_id) !== ivr) {
 				return {};
 			}
 		}
 
 		if (event === 'voicemail_received') {
 			const voicemailBox = getTrimmedParam(this, 'voicemailBox');
-			if (voicemailBox && String(bodyData.extension ?? '') !== voicemailBox) {
+			if (voicemailBox && normaliseId(bodyData.extension) !== voicemailBox) {
 				return {};
 			}
 		}
